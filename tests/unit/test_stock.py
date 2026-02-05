@@ -2,7 +2,7 @@ import sys
 import os
 
 # Ensure the app folder is on sys.path so imports match runtime
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'app'))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
@@ -19,6 +19,7 @@ def test_graham_formula_positive_values():
 def test_discount_to_graham_calculation():
     s = Stock(lpa=1.0, vpa=4.0, price=50.0)
     graham = s.get_graham_formula()
-    expected = round(((s.price - graham) / s.price) * 100, 2) if s.price and graham else 0.0
+    expected = (
+        round(((s.price - graham) / s.price) * 100, 2) if s.price and graham else 0.0
+    )
     assert s.get_discount_to_graham() == expected
- 

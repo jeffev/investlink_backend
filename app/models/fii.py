@@ -1,7 +1,8 @@
 from config import db
 
+
 class Fii(db.Model):
-    __tablename__ = 'fiis'
+    __tablename__ = "fiis"
 
     ticker = db.Column(db.String(10), primary_key=True)
     companyid = db.Column(db.String(80))
@@ -36,27 +37,27 @@ class Fii(db.Model):
 
     def to_json(self):
         return {
-            'ticker': self.ticker,
-            'companyid': self.companyid,
-            'companyname': self.companyname,
-            'price': self.price,
-            'sectorid': self.sectorid,
-            'sectorname': self.sectorname,
-            'subsectorid': self.subsectorid,
-            'subsectorname': self.subsectorname,
-            'segment': self.segment,
-            'segmentid': self.segmentid,
-            'gestao': self.gestao,
-            'gestao_f': self.gestao_f,
-            'dy': self.dy,
-            'p_vp': self.p_vp,
-            'valorpatrimonialcota': self.valorpatrimonialcota,
-            'liquidezmediadiaria': self.liquidezmediadiaria,
-            'percentualcaixa': self.percentualcaixa,
-            'dividend_cagr': self.dividend_cagr,
-            'cota_cagr': self.cota_cagr,
-            'numerocotistas': self.numerocotistas,
-            'numerocotas': self.numerocotas,
-            'patrimonio': self.patrimonio,
-            'lastdividend': self.lastdividend
+            "ticker": self.ticker,
+            "companyid": self.companyid,
+            "companyname": self.companyname,
+            "price": self.price,
+            "sectorid": self.sectorid,
+            "sectorname": self.sectorname,
+            "subsectorid": self.subsectorid,
+            "subsectorname": self.subsectorname,
+            "segment": self.segment,
+            "segmentid": self.segmentid,
+            "gestao": self.gestao,
+            "gestao_f": self.gestao_f,
+            "dy": self.dy,
+            "p_vp": self.p_vp,
+            "valorpatrimonialcota": self.valorpatrimonialcota,
+            "liquidezmediadiaria": self.liquidezmediadiaria,
+            "percentualcaixa": self.percentualcaixa,
+            "dividend_cagr": self.dividend_cagr,
+            "cota_cagr": self.cota_cagr,
+            "numerocotistas": self.numerocotistas,
+            "numerocotas": self.numerocotas,
+            "patrimonio": self.patrimonio,
+            "lastdividend": self.lastdividend,
         }

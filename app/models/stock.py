@@ -2,8 +2,9 @@ import math
 
 from config import db
 
+
 class Stock(db.Model):
-    __tablename__ = 'stocks'
+    __tablename__ = "stocks"
 
     ticker = db.Column(db.String(10), primary_key=True)
     companyid = db.Column(db.String(80))
@@ -47,13 +48,12 @@ class Stock(db.Model):
     ey_rank = db.Column(db.Integer)
     magic_formula_rank = db.Column(db.Integer)
 
-
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-        
-        self.graham_formula = self.get_graham_formula();
-        self.discount_to_graham = self.get_discount_to_graham();
+
+        self.graham_formula = self.get_graham_formula()
+        self.discount_to_graham = self.get_discount_to_graham()
 
     def __repr__(self):
         return f"<Stock(companyname={self.companyname}, ticker={self.ticker}, price={self.price}, graham={self.graham_formula}, dcto={self.discount_to_graham})>"
@@ -63,7 +63,11 @@ class Stock(db.Model):
         Calculate the percentage discount to the Graham Formula: Discount = ((Market Value - Graham Formula) / Market Value) * 100
         """
         graham_formula_value = self.get_graham_formula()
-        discount = ((self.price - graham_formula_value) / self.price) * 100 if self.price and graham_formula_value else 0.0
+        discount = (
+            ((self.price - graham_formula_value) / self.price) * 100
+            if self.price and graham_formula_value
+            else 0.0
+        )
         return round(discount, 2)
 
     def get_graham_formula(self):
@@ -78,45 +82,45 @@ class Stock(db.Model):
 
     def to_json(self):
         return {
-            'ticker': self.ticker,
-            'companyid': self.companyid,
-            'companyname': self.companyname,
-            'price': self.price,
-            'p_l': self.p_l,
-            'dy': self.dy,
-            'p_vp': self.p_vp,
-            'p_ebit': self.p_ebit,
-            'p_ativo': self.p_ativo,
-            'ev_ebit': self.ev_ebit,
-            'margembruta': self.margembruta,
-            'margemebit': self.margemebit,
-            'margemliquida': self.margemliquida,
-            'p_sr': self.p_sr,
-            'p_capitalgiro': self.p_capitalgiro,
-            'p_ativocirculante': self.p_ativocirculante,
-            'giroativos': self.giroativos,
-            'roe': self.roe,
-            'roa': self.roa,
-            'roic': self.roic,
-            'dividaliquidapatrimonioliquido': self.dividaliquidapatrimonioliquido,
-            'dividaliquidaebit': self.dividaliquidaebit,
-            'pl_ativo': self.pl_ativo,
-            'passivo_ativo': self.passivo_ativo,
-            'liquidezcorrente': self.liquidezcorrente,
-            'peg_ratio': self.peg_ratio,
-            'receitas_cagr5': self.receitas_cagr5,
-            'vpa': self.vpa,
-            'lpa': self.lpa,
-            'valormercado': self.valormercado,
-            'segmentid': self.segmentid,
-            'sectorid': self.sectorid,
-            'subsectorid': self.subsectorid,
-            'subsectorname': self.subsectorname,
-            'segmentname': self.segmentname,
-            'sectorname': self.sectorname,
-            'graham_formula': self.graham_formula,
-            'discount_to_graham': self.discount_to_graham,
-            'roic_rank': self.roic_rank,
-            'ey_rank': self.ey_rank,
-            'magic_formula_rank': self.magic_formula_rank
+            "ticker": self.ticker,
+            "companyid": self.companyid,
+            "companyname": self.companyname,
+            "price": self.price,
+            "p_l": self.p_l,
+            "dy": self.dy,
+            "p_vp": self.p_vp,
+            "p_ebit": self.p_ebit,
+            "p_ativo": self.p_ativo,
+            "ev_ebit": self.ev_ebit,
+            "margembruta": self.margembruta,
+            "margemebit": self.margemebit,
+            "margemliquida": self.margemliquida,
+            "p_sr": self.p_sr,
+            "p_capitalgiro": self.p_capitalgiro,
+            "p_ativocirculante": self.p_ativocirculante,
+            "giroativos": self.giroativos,
+            "roe": self.roe,
+            "roa": self.roa,
+            "roic": self.roic,
+            "dividaliquidapatrimonioliquido": self.dividaliquidapatrimonioliquido,
+            "dividaliquidaebit": self.dividaliquidaebit,
+            "pl_ativo": self.pl_ativo,
+            "passivo_ativo": self.passivo_ativo,
+            "liquidezcorrente": self.liquidezcorrente,
+            "peg_ratio": self.peg_ratio,
+            "receitas_cagr5": self.receitas_cagr5,
+            "vpa": self.vpa,
+            "lpa": self.lpa,
+            "valormercado": self.valormercado,
+            "segmentid": self.segmentid,
+            "sectorid": self.sectorid,
+            "subsectorid": self.subsectorid,
+            "subsectorname": self.subsectorname,
+            "segmentname": self.segmentname,
+            "sectorname": self.sectorname,
+            "graham_formula": self.graham_formula,
+            "discount_to_graham": self.discount_to_graham,
+            "roic_rank": self.roic_rank,
+            "ey_rank": self.ey_rank,
+            "magic_formula_rank": self.magic_formula_rank,
         }

@@ -2,7 +2,7 @@ import sys
 import os
 
 # Ensure app package is importable
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'app'))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
@@ -51,36 +51,36 @@ class DummySession:
 @pytest.fixture(autouse=True)
 def isolate(monkeypatch):
     # Replace jsonify to return plain data for assertions
-    monkeypatch.setattr(fav_srv, 'jsonify', lambda x: x)
+    monkeypatch.setattr(fav_srv, "jsonify", lambda x: x)
     # Replace db.session with dummy session
     dummy = DummySession()
-    monkeypatch.setattr(fav_srv.db, 'session', dummy)
+    monkeypatch.setattr(fav_srv.db, "session", dummy)
     return monkeypatch
 
 
 def test_add_favorite_already_exists():
     # Simulate existing favorite present
     fav_srv.Favorite.query = QueryStub(first=object())
-    result = fav_srv.add_favorite(1, 'TST')
-    assert result == ({'message': 'This stock is already favorited by this user'}, 400)
+    result = fav_srv.add_favorite(1, "TST")
+    assert result == ({"message": "This stock is already favorited by this user"}, 400)
 
 
 def test_add_favorite_success():
     # No existing favorite
     fav_srv.Favorite.query = QueryStub(first=None)
     # Ensure new Favorite construction does not require DB
-    result = fav_srv.add_favorite(1, 'TST')
-    assert result == ({'message': 'Favorite added successfully'}, 201)
+    result = fav_srv.add_favorite(1, "TST")
+    assert result == ({"message": "Favorite added successfully"}, 201)
 
 
 def test_remove_favorite_not_found():
     fav_srv.Favorite.query = QueryStub(first=None)
-    result = fav_srv.remove_favorite(1, 'TST')
-    assert result == ({'message': 'Favorite not found'}, 404)
+    result = fav_srv.remove_favorite(1, "TST")
+    assert result == ({"message": "Favorite not found"}, 404)
 
 
 def test_remove_favorite_success():
     # Simulate favorite exists
     fav_srv.Favorite.query = QueryStub(first=object())
-    result = fav_srv.remove_favorite(1, 'TST')
-    assert result == ({'message': 'Favorite deleted successfully'}, 200)
+    result = fav_srv.remove_favorite(1, "TST")
+    assert result == ({"message": "Favorite deleted successfully"}, 200)

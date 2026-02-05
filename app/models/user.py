@@ -1,7 +1,8 @@
 from config import db
 
+
 class User(db.Model):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     user_name = db.Column(db.String(80))
@@ -19,9 +20,9 @@ class User(db.Model):
 
     def to_json(self):
         return {
-            'id': self.id,
-            'user_name': self.user_name,
-            'name': self.name,
-            'email': self.email,
-            'profile': self.profile
+            "id": self.id,
+            "user_name": self.user_name,
+            "name": self.name,
+            "email": self.email,
+            "profile": self.profile,
         }

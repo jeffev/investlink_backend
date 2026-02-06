@@ -18,7 +18,10 @@ class Favorite(db.Model):
             setattr(self, key, value)
 
     def __repr__(self):
-        return f"<Favorite(user_id={self.user_id}, stock_ticker={self.stock_ticker}, ceiling_price={self.ceiling_price}, target_price={self.target_price})>"
+        return (
+            f"<Favorite(user_id={self.user_id}, stock_ticker={self.stock_ticker}, "
+            f"ceiling_price={self.ceiling_price}, target_price={self.target_price})>"
+        )
 
     def to_json(self):
         stock_json = self.stock.to_json() if self.stock else None

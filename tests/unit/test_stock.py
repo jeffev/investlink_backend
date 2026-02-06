@@ -6,7 +6,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from models.stock import Stock
+from models.stock import Stock  # noqa: E402
 
 
 def test_graham_formula_positive_values():

@@ -6,8 +6,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from models.favorite import Favorite
-from models.stock import Stock
+from models.favorite import Favorite  # noqa: E402
+from models.stock import Stock  # noqa: E402
 
 
 def test_favorite_to_json_includes_stock():

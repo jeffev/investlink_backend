@@ -18,7 +18,10 @@ class FavoriteFii(db.Model):
             setattr(self, key, value)
 
     def __repr__(self):
-        return f"<FavoriteFII(user_id={self.user_id}, fii_ticker={self.fii_ticker}, ceiling_price={self.ceiling_price}, target_price={self.target_price})>"
+        return (
+            f"<FavoriteFII(user_id={self.user_id}, fii_ticker={self.fii_ticker}, "
+            f"ceiling_price={self.ceiling_price}, target_price={self.target_price})>"
+        )
 
     def to_json(self):
         fii_json = self.fii.to_json() if self.fii else None

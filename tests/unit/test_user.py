@@ -6,7 +6,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from models.user import User
+from models.user import User  # noqa: E402
 
 
 def test_user_to_json_contains_expected_fields():

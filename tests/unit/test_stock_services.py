@@ -6,8 +6,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-import types
-import services.stock_services as stock_srv
+import services.stock_services as stock_srv  # noqa: E402
 
 
 def test_calculate_ey_zero_price():

@@ -64,7 +64,7 @@ def edit_favorite_fii(favorite_id, favorite_data):
     if user_id is not None and not User.query.get(user_id):
         return jsonify({"message": "User not found"}), 404
 
-    if fii_ticker is not None and not FII.query.get(fii_ticker):
+    if fii_ticker is not None and not Fii.query.get(fii_ticker):
         return jsonify({"message": "FII not found"}), 404
 
     favorite = FavoriteFii.query.get(favorite_id)

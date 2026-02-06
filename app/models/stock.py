@@ -56,11 +56,16 @@ class Stock(db.Model):
         self.discount_to_graham = self.get_discount_to_graham()
 
     def __repr__(self):
-        return f"<Stock(companyname={self.companyname}, ticker={self.ticker}, price={self.price}, graham={self.graham_formula}, dcto={self.discount_to_graham})>"
+        return (
+            f"<Stock(companyname={self.companyname}, ticker={self.ticker}, "
+            f"price={self.price}, graham={self.graham_formula}, "
+            f"dcto={self.discount_to_graham})>"
+        )
 
     def get_discount_to_graham(self):
         """
-        Calculate the percentage discount to the Graham Formula: Discount = ((Market Value - Graham Formula) / Market Value) * 100
+        Calculate the percentage discount to the Graham Formula:
+        Discount = ((Market Value - Graham Formula) / Market Value) * 100
         """
         graham_formula_value = self.get_graham_formula()
         discount = (
@@ -72,7 +77,8 @@ class Stock(db.Model):
 
     def get_graham_formula(self):
         """
-        Calculate the Graham Formula: Intrinsic Value = √ (22.5 x LPA x VPA), where LPA is Earnings Per Share and VPA is Book Value Per Share.
+        Calculate the Graham Formula: Intrinsic Value = √ (22.5 x LPA x VPA).
+        LPA is Earnings Per Share and VPA is Book Value Per Share.
         """
         if self.lpa and self.vpa and self.lpa >= 0 and self.vpa >= 0:
             formula = math.sqrt(22.5 * self.lpa * self.vpa)

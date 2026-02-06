@@ -33,7 +33,10 @@ class Fii(db.Model):
             setattr(self, key, value)
 
     def __repr__(self):
-        return f"<Fii(companyname={self.companyname}, ticker={self.ticker}, price={self.price})>"
+        return (
+            f"<Fii(companyname={self.companyname}, ticker={self.ticker}, "
+            f"price={self.price})>"
+        )
 
     def to_json(self):
         return {

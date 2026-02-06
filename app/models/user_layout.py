@@ -14,7 +14,10 @@ class UserLayout(db.Model):
             setattr(self, key, value)
 
     def __repr__(self):
-        return f"<UserLayout(user_id={self.user_id}, layout={self.layout}, estado={self.estado})>"
+        return (
+            f"<UserLayout(user_id={self.user_id}, layout={self.layout}, "
+            f"estado={self.estado})>"
+        )
 
     def to_json(self):
         return {

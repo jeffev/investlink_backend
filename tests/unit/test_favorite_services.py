@@ -6,9 +6,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-import pytest
+import pytest  # noqa: E402
 
-import services.favorite_services as fav_srv
+import services.favorite_services as fav_srv  # noqa: E402
 
 
 class QueryStub:

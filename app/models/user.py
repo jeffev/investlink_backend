@@ -16,7 +16,10 @@ class User(db.Model):
             setattr(self, key, value)
 
     def __repr__(self):
-        return f"<User(user_name={self.user_name}, name={self.name}, email={self.email}, profile={self.profile})>"
+        return (
+            f"<User(user_name={self.user_name}, name={self.name}, "
+            f"email={self.email}, profile={self.profile})>"
+        )
 
     def to_json(self):
         return {

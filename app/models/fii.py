@@ -64,3 +64,7 @@ class Fii(db.Model):
             "patrimonio": self.patrimonio,
             "lastdividend": self.lastdividend,
         }
+
+
+# Alias para compatibilidade com testes
+FII = Fii

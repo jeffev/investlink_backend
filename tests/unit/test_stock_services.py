@@ -3,9 +3,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 
 # Ensure app package is importable
-ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "app")
-)
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 

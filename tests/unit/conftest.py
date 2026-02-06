@@ -4,9 +4,7 @@ import pytest
 from unittest.mock import MagicMock
 
 # Ensure the app folder is on sys.path
-ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "app")
-)
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 

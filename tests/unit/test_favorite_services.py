@@ -3,9 +3,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 
 # Ensure app package is importable
-ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "app")
-)
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
@@ -96,9 +94,7 @@ def test_remove_favorite_success():
 @patch("services.favorite_services.db.session")
 def test_edit_favorite_with_mock(mock_session, mock_query):
     """Test edit_favorite updates favorite with mock"""
-    favorite = Favorite(
-        id=1, user_id=1, stock_ticker="PETR4", ceiling_price=30.0
-    )
+    favorite = Favorite(id=1, user_id=1, stock_ticker="PETR4", ceiling_price=30.0)
     mock_query.get.return_value = favorite
 
     fav_data = {"ceiling_price": 35.0, "target_price": 28.0}

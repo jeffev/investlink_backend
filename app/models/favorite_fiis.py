@@ -32,3 +32,7 @@ class FavoriteFii(db.Model):
             "ceiling_price": self.ceiling_price,
             "target_price": self.target_price,
         }
+
+
+# Alias para compatibilidade com testes
+Favorite_FII = FavoriteFii

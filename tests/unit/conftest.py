@@ -4,7 +4,9 @@ import pytest
 from unittest.mock import MagicMock
 
 # Ensure the app folder is on sys.path
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
+ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "app")
+)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
@@ -26,13 +28,14 @@ def mock_db_session():
 def sample_user():
     """Fixture for sample user"""
     from models.user import User
+
     return User(
         id=1,
         user_name="testuser",
         name="Test User",
         email="test@example.com",
         profile="USER",
-        password="hashed_password"
+        password="hashed_password",
     )
 
 
@@ -40,6 +43,7 @@ def sample_user():
 def sample_stock():
     """Fixture for sample stock"""
     from models.stock import Stock
+
     return Stock(
         ticker="PETR4",
         companyname="Petrobras",
@@ -55,6 +59,7 @@ def sample_stock():
 def sample_fii():
     """Fixture for sample FII"""
     from models.fii import FII
+
     return FII(
         ticker="KNRI11",
         name="Knewin",
@@ -68,6 +73,7 @@ def sample_fii():
 def sample_favorite(sample_user, sample_stock):
     """Fixture for sample favorite"""
     from models.favorite import Favorite
+
     fav = Favorite(
         id=1,
         user_id=sample_user.id,
@@ -83,6 +89,7 @@ def sample_favorite(sample_user, sample_stock):
 def sample_favorite_fii(sample_user, sample_fii):
     """Fixture for sample favorite FII"""
     from models.favorite_fiis import Favorite_FII
+
     fav = Favorite_FII(
         id=1,
         user_id=sample_user.id,
@@ -98,14 +105,15 @@ def sample_favorite_fii(sample_user, sample_fii):
 def sample_layout(sample_user):
     """Fixture for sample user layout"""
     from models.user_layout import UserLayout
+
     return UserLayout(
         id=1,
         user_id=sample_user.id,
         layout_name="Default",
         layout_config={
             "columns": ["ticker", "price", "dy"],
-            "sorting": ["ticker"]
-        }
+            "sorting": ["ticker"],
+        },
     )
 
 

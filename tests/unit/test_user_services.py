@@ -3,7 +3,9 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 
 # Ensure the app folder is on sys.path so imports match runtime
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
+ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "app")
+)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
@@ -51,14 +53,18 @@ def test_validate_username_with_special_characters():
     assert validate_username("user name") is False
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_list_users_returns_jsonified_list(mock_session, mock_query):
     """Test list_users returns all users as JSON list"""
     from services.user_services import list_users
 
-    user1 = User(id=1, user_name="john", name="John", email="j@example.com", profile="USER")
-    user2 = User(id=2, user_name="jane", name="Jane", email="ja@example.com", profile="USER")
+    user1 = User(
+        id=1, user_name="john", name="John", email="j@example.com", profile="USER"
+    )
+    user2 = User(
+        id=2, user_name="jane", name="Jane", email="ja@example.com", profile="USER"
+    )
     mock_query.all.return_value = [user1, user2]
 
     response = list_users()
@@ -69,13 +75,15 @@ def test_list_users_returns_jsonified_list(mock_session, mock_query):
     assert data[1]["user_name"] == "jane"
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_view_user_with_valid_id(mock_session, mock_query):
     """Test view_user returns user data when user exists"""
     from services.user_services import view_user
 
-    user = User(id=1, user_name="john", name="John", email="j@example.com", profile="USER")
+    user = User(
+        id=1, user_name="john", name="John", email="j@example.com", profile="USER"
+    )
     mock_query.get.return_value = user
 
     response = view_user(1)
@@ -85,8 +93,8 @@ def test_view_user_with_valid_id(mock_session, mock_query):
     assert data["email"] == "j@example.com"
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_view_user_returns_404_when_not_found(mock_session, mock_query):
     """Test view_user returns 404 when user doesn't exist"""
     from services.user_services import view_user
@@ -99,8 +107,8 @@ def test_view_user_returns_404_when_not_found(mock_session, mock_query):
     assert status == 404
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_new_user_validates_email_required(mock_session, mock_query):
     """Test new_user returns 400 when email is missing"""
     from services.user_services import new_user
@@ -118,8 +126,8 @@ def test_new_user_validates_email_required(mock_session, mock_query):
     assert "Email is required" in response[0].get_json()["message"]
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_new_user_validates_username_required(mock_session, mock_query):
     """Test new_user returns 400 when username is missing"""
     from services.user_services import new_user
@@ -137,8 +145,8 @@ def test_new_user_validates_username_required(mock_session, mock_query):
     assert "User name is required" in response[0].get_json()["message"]
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_new_user_validates_email_format(mock_session, mock_query):
     """Test new_user validates email format"""
     from services.user_services import new_user
@@ -157,8 +165,8 @@ def test_new_user_validates_email_format(mock_session, mock_query):
     assert "Invalid email format" in response[0].get_json()["message"]
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_new_user_validates_username_format(mock_session, mock_query):
     """Test new_user validates username format"""
     from services.user_services import new_user
@@ -177,13 +185,15 @@ def test_new_user_validates_username_format(mock_session, mock_query):
     assert "Invalid username format" in response[0].get_json()["message"]
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_new_user_rejects_duplicate_username(mock_session, mock_query):
     """Test new_user returns 400 when username already exists"""
     from services.user_services import new_user
 
-    existing_user = User(id=1, user_name="john", name="John", email="j@example.com", profile="USER")
+    existing_user = User(
+        id=1, user_name="john", name="John", email="j@example.com", profile="USER"
+    )
     mock_query.filter_by.return_value.first.return_value = existing_user
 
     user_data = {
@@ -200,8 +210,8 @@ def test_new_user_rejects_duplicate_username(mock_session, mock_query):
     assert "User already exists" in response[0].get_json()["message"]
 
 
-@patch('services.user_services.User.query')
-@patch('services.user_services.db.session')
+@patch("services.user_services.User.query")
+@patch("services.user_services.db.session")
 def test_delete_user_returns_404_when_not_found(mock_session, mock_query):
     """Test delete_user returns 404 when user doesn't exist"""
     from services.user_services import delete_user

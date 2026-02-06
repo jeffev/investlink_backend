@@ -3,16 +3,18 @@ import os
 from unittest.mock import Mock, patch
 
 # Ensure the app folder is on sys.path so imports match runtime
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
+ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "app")
+)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from models.fii import FII  # noqa: E402
 
 
-@patch('services.fii_services.FII.query')
-@patch('services.fii_services.Favorite_FII.query')
-@patch('services.fii_services.db.session')
+@patch("services.fii_services.FII.query")
+@patch("services.fii_services.Favorite_FII.query")
+@patch("services.fii_services.db.session")
 def test_list_fiis_returns_all_fiis(mock_session, mock_fav_query, mock_query):
     """Test list_fiis returns all FIIs with favorita flag"""
     from services.fii_services import list_fiis
@@ -30,8 +32,8 @@ def test_list_fiis_returns_all_fiis(mock_session, mock_fav_query, mock_query):
     assert data[1]["ticker"] == "XPML11"
 
 
-@patch('services.fii_services.FII.query')
-@patch('services.fii_services.db.session')
+@patch("services.fii_services.FII.query")
+@patch("services.fii_services.db.session")
 def test_view_fii_with_valid_ticker(mock_session, mock_query):
     """Test view_fii returns FII data when exists"""
     from services.fii_services import view_fii
@@ -46,8 +48,8 @@ def test_view_fii_with_valid_ticker(mock_session, mock_query):
     assert data["name"] == "Knewin"
 
 
-@patch('services.fii_services.FII.query')
-@patch('services.fii_services.db.session')
+@patch("services.fii_services.FII.query")
+@patch("services.fii_services.db.session")
 def test_view_fii_returns_404_when_not_found(mock_session, mock_query):
     """Test view_fii returns 404 when FII doesn't exist"""
     from services.fii_services import view_fii
@@ -60,8 +62,8 @@ def test_view_fii_returns_404_when_not_found(mock_session, mock_query):
     assert status == 404
 
 
-@patch('services.fii_services.FII.query')
-@patch('services.fii_services.db.session')
+@patch("services.fii_services.FII.query")
+@patch("services.fii_services.db.session")
 def test_new_fii_rejects_duplicate_ticker(mock_session, mock_query):
     """Test new_fii returns 400 when ticker already exists"""
     from services.fii_services import new_fii
@@ -82,8 +84,8 @@ def test_new_fii_rejects_duplicate_ticker(mock_session, mock_query):
     assert "already exists" in response[0].get_json()["message"]
 
 
-@patch('services.fii_services.FII.query')
-@patch('services.fii_services.db.session')
+@patch("services.fii_services.FII.query")
+@patch("services.fii_services.db.session")
 def test_delete_fii_returns_404_when_not_found(mock_session, mock_query):
     """Test delete_fii returns 404 when FII doesn't exist"""
     from services.fii_services import delete_fii

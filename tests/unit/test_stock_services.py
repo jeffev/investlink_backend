@@ -1,5 +1,6 @@
 import sys
 import os
+from unittest.mock import Mock, patch, MagicMock
 
 # Ensure app package is importable
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
@@ -7,6 +8,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 import services.stock_services as stock_srv  # noqa: E402
+from models.stock import Stock  # noqa: E402
 
 
 def test_calculate_ey_zero_price():
@@ -17,6 +19,77 @@ def test_calculate_ey_zero_price():
 def test_calculate_ey_normal():
     data = {"lpa": 2.0, "price": 50.0}
     assert stock_srv.calculate_ey(data) == 2.0 / 50.0
+
+
+@patch('services.stock_services.Stock.query')
+@patch('services.stock_services.db.session')
+def test_list_stocks_includes_favorita_flag(mock_session, mock_query):
+    """Test list_stocks adds favorita flag based on user favorites"""
+    stock1 = Stock(ticker="PETR4", companyname="Petrobras", price=25.0)
+    stock2 = Stock(ticker="VALE3", companyname="Vale", price=60.0)
+    mock_query.all.return_value = [stock1, stock2]
+
+    with patch('services.stock_services.Favorite.query') as mock_fav_query:
+        mock_fav_query.filter_by.return_value.all.return_value = []
+        response = stock_srv.list_stocks(user_id=1)
+        data = response.get_json()
+
+        assert len(data) == 2
+        assert "favorita" in data[0]
+        assert "favorita" in data[1]
+
+
+@patch('services.stock_services.Stock.query')
+@patch('services.stock_services.db.session')
+def test_new_stock_calculates_graham_formula(mock_session, mock_query):
+    """Test new_stock calculates Graham formula on creation"""
+    mock_query.filter_by.return_value.first.return_value = None
+
+    stock_data = {
+        "ticker": "PETR4",
+        "companyname": "Petrobras",
+        "price": 25.0,
+        "lpa": 5.0,
+        "vpa": 20.0,
+    }
+
+    response = stock_srv.new_stock(stock_data)
+    status = response[1]
+
+    assert status == 201
+    assert "Stock added successfully" in response[0].get_json()["message"]
+
+
+@patch('services.stock_services.Stock.query')
+@patch('services.stock_services.db.session')
+def test_edit_stock_recalculates_graham_formula(mock_session, mock_query):
+    """Test edit_stock recalculates Graham formula and discount"""
+    stock = Stock(ticker="PETR4", companyname="Petrobras", price=25.0, lpa=5.0, vpa=20.0)
+    mock_query.get.return_value = stock
+
+    stock_data = {
+        "price": 30.0,
+        "lpa": 5.5,
+    }
+
+    response = stock_srv.edit_stock("PETR4", stock_data)
+    status = response[1]
+
+    assert status == 200
+
+
+@patch('services.stock_services.Stock.query')
+@patch('services.stock_services.db.session')
+def test_delete_stock_success(mock_session, mock_query):
+    """Test delete_stock removes stock from database"""
+    stock = Stock(ticker="PETR4", companyname="Petrobras", price=25.0)
+    mock_query.get.return_value = stock
+
+    response = stock_srv.delete_stock("PETR4")
+    status = response[1]
+
+    assert status == 200
+    assert "deleted successfully" in response[0].get_json()["message"]
 
 
 def test_get_all_stocks_from_statusinvest_http_error(monkeypatch):

@@ -1,5 +1,6 @@
 import sys
 import os
+from unittest.mock import Mock, patch, MagicMock
 
 # Ensure app package is importable
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
@@ -9,6 +10,9 @@ if ROOT not in sys.path:
 import pytest  # noqa: E402
 
 import services.favorite_services as fav_srv  # noqa: E402
+from models.favorite import Favorite  # noqa: E402
+from models.user import User  # noqa: E402
+from models.stock import Stock  # noqa: E402
 
 
 class QueryStub:
@@ -84,3 +88,32 @@ def test_remove_favorite_success():
     fav_srv.Favorite.query = QueryStub(first=object())
     result = fav_srv.remove_favorite(1, "TST")
     assert result == ({"message": "Favorite deleted successfully"}, 200)
+
+
+@patch('services.favorite_services.Favorite.query')
+@patch('services.favorite_services.db.session')
+def test_edit_favorite_with_mock(mock_session, mock_query):
+    """Test edit_favorite updates favorite with mock"""
+    favorite = Favorite(id=1, user_id=1, stock_ticker="PETR4", ceiling_price=30.0)
+    mock_query.get.return_value = favorite
+
+    fav_data = {"ceiling_price": 35.0, "target_price": 28.0}
+    result = fav_srv.edit_favorite(1, fav_data)
+    
+    assert result[1] == 200
+
+
+@patch('services.favorite_services.User.query')
+@patch('services.favorite_services.Stock.query')
+@patch('services.favorite_services.Favorite.query')
+@patch('services.favorite_services.db.session')
+def test_new_favorite_requires_valid_user_and_stock(mock_session, mock_fav, mock_stock, mock_user):
+    """Test new_favorite validates both user and stock exist"""
+    mock_user.get.return_value = User(id=1, user_name="john", email="j@example.com", profile="USER")
+    mock_stock.get.return_value = Stock(ticker="PETR4", companyname="Petrobras", price=25.0)
+    mock_fav.filter_by.return_value.first.return_value = None
+
+    fav_data = {"user_id": 1, "stock_ticker": "PETR4"}
+    result = fav_srv.new_favorite(fav_data)
+    
+    assert result[1] == 201

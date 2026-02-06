@@ -1,6 +1,6 @@
 import sys
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 # Ensure the app folder is on sys.path so imports match runtime
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))

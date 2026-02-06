@@ -1,6 +1,6 @@
 import sys
 import os
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 
 # Ensure app package is importable
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))

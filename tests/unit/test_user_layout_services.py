@@ -1,6 +1,6 @@
 import sys
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 # Ensure the app folder is on sys.path so imports match runtime
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
@@ -8,7 +8,6 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from models.user_layout import UserLayout  # noqa: E402
-from models.user import User  # noqa: E402
 
 
 def test_user_layout_to_json_contains_expected_fields():

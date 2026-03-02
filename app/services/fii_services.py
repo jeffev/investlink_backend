@@ -3,8 +3,8 @@ import json
 import requests
 from flask import jsonify
 
-from models.fii import Fii, FII
-from models.favorite_fiis import FavoriteFii, Favorite_FII
+from models.fii import Fii
+from models.favorite_fiis import FavoriteFii
 from config import db
 
 

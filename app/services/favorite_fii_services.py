@@ -1,8 +1,8 @@
 from flask import jsonify
 from config import db
-from models.favorite_fiis import FavoriteFii, Favorite_FII
+from models.favorite_fiis import FavoriteFii
 from models.user import User
-from models.fii import Fii, FII
+from models.fii import Fii
 
 
 def handle_db_operations(func):

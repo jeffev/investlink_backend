@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch, MagicMock
 from services.favorite_services import (
     list_favorites,
@@ -10,8 +9,6 @@ from services.favorite_services import (
     remove_favorite,
 )
 from models.favorite import Favorite
-from models.stock import Stock
-from models.user import User
 
 
 class TestFavoriteServices:

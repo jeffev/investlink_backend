@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch, MagicMock
 from services.user_layout_service import (
     get_user_layout,

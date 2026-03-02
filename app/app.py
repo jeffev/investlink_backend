@@ -3,7 +3,7 @@ from flask_cors import CORS
 from flask_migrate import upgrade
 
 from utils import setup_routes
-from config import create_app, db
+from config import create_app
 
 app = create_app()
 

@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch, MagicMock
 from services.stock_services import (
     list_stocks,

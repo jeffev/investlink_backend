@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch, MagicMock
 from services.favorite_fii_services import (
     list_favorites_fii,
@@ -10,8 +9,6 @@ from services.favorite_fii_services import (
     remove_favorite_fii,
 )
 from models.favorite_fiis import FavoriteFii
-from models.fii import Fii
-from models.user import User
 
 
 class TestFavoriteFiiServices:

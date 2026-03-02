@@ -1,5 +1,3 @@
-import pytest
-import json
 from unittest.mock import patch, MagicMock
 from services.fii_services import (
     list_fiis,
@@ -156,7 +154,7 @@ class TestFiiServices:
 
             with (
                 patch("services.fii_services.Fii.query") as mock_fii_query,
-                patch("services.fii_services.FavoriteFii.query") as mock_favorite_query,
+                patch("services.fii_services.FavoriteFii.query"),
                 patch("services.fii_services.db") as mock_db,
             ):
 

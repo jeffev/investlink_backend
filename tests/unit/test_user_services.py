@@ -1,5 +1,3 @@
-import pytest
-import bcrypt
 from unittest.mock import patch, MagicMock
 from services.user_services import (
     list_users,

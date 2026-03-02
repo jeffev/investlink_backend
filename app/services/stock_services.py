@@ -18,15 +18,20 @@ def list_stocks(user_id, page=1, per_page=50):
             {**stock.to_json(), "favorita": stock.ticker in favorites}
             for stock in paginated.items
         ]
-        return jsonify({
-            "data": stocks_json,
-            "pagination": {
-                "total": paginated.total,
-                "pages": paginated.pages,
-                "current_page": paginated.page,
-                "per_page": per_page,
-            },
-        }), 200
+        return (
+            jsonify(
+                {
+                    "data": stocks_json,
+                    "pagination": {
+                        "total": paginated.total,
+                        "pages": paginated.pages,
+                        "current_page": paginated.page,
+                        "per_page": per_page,
+                    },
+                }
+            ),
+            200,
+        )
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500

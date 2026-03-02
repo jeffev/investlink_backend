@@ -20,15 +20,20 @@ def list_fiis(user_id, page=1, per_page=50):
             for fii in paginated.items
         ]
         fiis_json.sort(key=lambda x: x["favorita"], reverse=True)
-        return jsonify({
-            "data": fiis_json,
-            "pagination": {
-                "total": paginated.total,
-                "pages": paginated.pages,
-                "current_page": paginated.page,
-                "per_page": per_page,
-            },
-        }), 200
+        return (
+            jsonify(
+                {
+                    "data": fiis_json,
+                    "pagination": {
+                        "total": paginated.total,
+                        "pages": paginated.pages,
+                        "current_page": paginated.page,
+                        "per_page": per_page,
+                    },
+                }
+            ),
+            200,
+        )
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500

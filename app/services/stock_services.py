@@ -7,19 +7,26 @@ from models.favorite import Favorite
 from config import db
 
 
-def list_stocks(user_id):
+def list_stocks(user_id, page=1, per_page=50):
     try:
-        all_stocks = Stock.query.all()
+        per_page = min(per_page, 500)
         favorites = {
             fav.stock_ticker for fav in Favorite.query.filter_by(user_id=user_id).all()
         }
-
+        paginated = Stock.query.paginate(page=page, per_page=per_page, error_out=False)
         stocks_json = [
             {**stock.to_json(), "favorita": stock.ticker in favorites}
-            for stock in all_stocks
+            for stock in paginated.items
         ]
-
-        return jsonify(stocks_json)
+        return jsonify({
+            "data": stocks_json,
+            "pagination": {
+                "total": paginated.total,
+                "pages": paginated.pages,
+                "current_page": paginated.page,
+                "per_page": per_page,
+            },
+        }), 200
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500
@@ -30,7 +37,7 @@ def view_stock(ticker):
         stock = Stock.query.get(ticker)
         if not stock:
             return jsonify({"message": "Stock not found"}), 404
-        return jsonify(stock.to_json())
+        return jsonify(stock.to_json()), 200
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500

@@ -13,7 +13,9 @@ from services.stock_services import (
 
 def list_stocks_json():
     user_id = get_jwt_identity()
-    return list_stocks(user_id)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+    return list_stocks(user_id, page, per_page)
 
 
 def view_stock_json(ticker):

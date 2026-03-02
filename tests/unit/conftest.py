@@ -2,11 +2,31 @@ import sys
 import os
 import pytest
 from unittest.mock import MagicMock
+from flask import Flask
 
 # Ensure the app folder is on sys.path
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
+
+
+# Flask application context fixture
+@pytest.fixture
+def app():
+    """Create and configure a new app instance for each test."""
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    with app.app_context():
+        yield app
+
+
+@pytest.fixture
+def client(app):
+    """A test client for the app."""
+    return app.test_client()
 
 
 # Mock database session
@@ -48,22 +68,37 @@ def sample_stock():
         price=25.0,
         lpa=5.0,
         vpa=20.0,
-        p_l=5.0,
-        dy=0.08,
     )
 
 
 @pytest.fixture
 def sample_fii():
     """Fixture for sample FII"""
-    from models.fii import FII
+    from models.fii import Fii
 
-    return FII(
+    return Fii(
         ticker="KNRI11",
-        name="Knewin",
+        companyname="Knewin",
         price=100.0,
+        sectorid=1,
+        sectorname="Real Estate",
+        subsectorid=1,
+        subsectorname="Real Estate",
+        segment="Real Estate",
+        segmentid=1,
+        gestao=1,
+        gestao_f="Gestão",
         dy=0.06,
         p_vp=1.2,
+        valorpatrimonialcota=100.0,
+        liquidezmediadiaria=1000.0,
+        percentualcaixa=0.1,
+        dividend_cagr=0.05,
+        cota_cagr=0.04,
+        numerocotistas=1000,
+        numerocotas=10000,
+        patrimonio=1000000.0,
+        lastdividend=5.0,
     )
 
 
@@ -86,9 +121,9 @@ def sample_favorite(sample_user, sample_stock):
 @pytest.fixture
 def sample_favorite_fii(sample_user, sample_fii):
     """Fixture for sample favorite FII"""
-    from models.favorite_fiis import Favorite_FII
+    from models.favorite_fiis import FavoriteFii
 
-    fav = Favorite_FII(
+    fav = FavoriteFii(
         id=1,
         user_id=sample_user.id,
         fii_ticker=sample_fii.ticker,
@@ -107,11 +142,8 @@ def sample_layout(sample_user):
     return UserLayout(
         id=1,
         user_id=sample_user.id,
-        layout_name="Default",
-        layout_config={
-            "columns": ["ticker", "price", "dy"],
-            "sorting": ["ticker"],
-        },
+        layout="Default",
+        estado=None,
     )
 
 

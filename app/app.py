@@ -1,13 +1,11 @@
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_cors import CORS
+from flask_migrate import upgrade
 
 from utils import setup_routes
 from config import create_app, db
 
 app = create_app()
-
-with app.app_context():
-    db.create_all()
 
 setup_routes(app)
 
@@ -22,4 +20,6 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 if __name__ == "__main__":
+    with app.app_context():
+        upgrade()
     app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1,144 +1,407 @@
-import sys
-import os
-from unittest.mock import patch
-
-# Ensure the app folder is on sys.path so imports match runtime
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
-from models.favorite_fiis import Favorite_FII  # noqa: E402
-from models.user import User  # noqa: E402
-from models.fii import FII  # noqa: E402
+import pytest
+from unittest.mock import patch, MagicMock
+from services.favorite_fii_services import (
+    list_favorites_fii, view_favorite_fii, new_favorite_fii, edit_favorite_fii, delete_favorite_fii,
+    add_favorite_fii, remove_favorite_fii
+)
+from models.favorite_fiis import FavoriteFii
+from models.fii import Fii
+from models.user import User
 
 
-@patch("services.favorite_fii_services.Favorite_FII.query")
-@patch("services.favorite_fii_services.db.session")
-def test_list_favorite_fiis_returns_user_favorites(mock_session, mock_query):
-    """Test list_favorite_fiis returns favorites for specific user"""
-    from services.favorite_fii_services import list_favorite_fiis
+class TestFavoriteFiiServices:
+    
+    def test_list_favorites_fii_success(self, app, sample_favorite_fii, sample_user):
+        """Test successful listing of favorite FIIs"""
+        with app.app_context():
+            mock_favorite = MagicMock(spec=FavoriteFii)
+            mock_favorite.to_json.return_value = {
+                'id': 1,
+                'user_id': 1,
+                'fii_ticker': 'KNRI11',
+                'ceiling_price': 110.0,
+                'target_price': 100.0
+            }
+            
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.filter_by.return_value.all.return_value = [mock_favorite]
+                
+                result, status_code = list_favorites_fii(sample_user.id)
+                
+                assert status_code == 200
+                result_data = result.get_json()
+                assert len(result_data) == 1
+                assert result_data[0]['fii_ticker'] == 'KNRI11'
 
-    fav1 = Favorite_FII(
-        id=1,
-        user_id=1,
-        fii_ticker="KNRI11",
-        ceiling_price=110.0,
-        target_price=100.0,
-    )
-    fav2 = Favorite_FII(
-        id=2,
-        user_id=1,
-        fii_ticker="XPML11",
-        ceiling_price=85.0,
-        target_price=75.0,
-    )
-    mock_query.filter_by.return_value.all.return_value = [fav1, fav2]
+    def test_list_favorites_fii_empty(self, app):
+        """Test listing favorite FIIs when no favorites exist"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.filter_by.return_value.all.return_value = []
+                
+                result, status_code = list_favorites_fii(1)
+                
+                assert status_code == 200
+                result_data = result.get_json()
+                assert result_data == []
 
-    response = list_favorite_fiis(user_id=1)
-    data = response.get_json()
+    def test_list_favorites_fii_with_exception(self, app):
+        """Test listing favorite FIIs when an exception occurs"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.filter_by.side_effect = Exception("Database error")
+                
+                result, status_code = list_favorites_fii(1)
+                
+                assert status_code == 500
+                result_data = result.get_json()
+                assert "Error in list_favorites_fii" in result_data['message']
 
-    assert len(data) == 2
-    assert data[0]["id"] == 1
-    assert data[1]["id"] == 2
+    def test_view_favorite_fii_success(self, app, sample_favorite_fii):
+        """Test viewing a specific favorite FII"""
+        with app.app_context():
+            mock_favorite = MagicMock(spec=FavoriteFii)
+            mock_favorite.to_json.return_value = {
+                'id': 1,
+                'user_id': 1,
+                'fii_ticker': 'KNRI11',
+                'ceiling_price': 110.0,
+                'target_price': 100.0
+            }
+            
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.get.return_value = mock_favorite
+                
+                result, status_code = view_favorite_fii(1)
+                
+                assert status_code == 200
+                result_data = result.get_json()
+                assert result_data['fii_ticker'] == 'KNRI11'
 
+    def test_view_favorite_fii_not_found(self, app):
+        """Test viewing a favorite FII that doesn't exist"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.get.return_value = None
+                
+                result, status_code = view_favorite_fii(999)
+                
+                assert status_code == 404
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite not found'
 
-@patch("services.favorite_fii_services.Favorite_FII.query")
-@patch("services.favorite_fii_services.db.session")
-def test_view_favorite_fii_returns_404_when_not_found(mock_session, mock_query):
-    """Test view_favorite_fii returns 404 when favorite doesn't exist"""
-    from services.favorite_fii_services import view_favorite_fii
+    def test_view_favorite_fii_with_exception(self, app):
+        """Test viewing a favorite FII when an exception occurs"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.get.side_effect = Exception("Database error")
+                
+                result, status_code = view_favorite_fii(1)
+                
+                assert status_code == 500
+                result_data = result.get_json()
+                assert "Error in view_favorite_fii" in result_data['message']
 
-    mock_query.get.return_value = None
+    def test_new_favorite_fii_success(self, app):
+        """Test creating a new favorite FII"""
+        with app.app_context():
+            favorite_data = {
+                'user_id': 1,
+                'fii_ticker': 'KNRI11',
+                'ceiling_price': 110.0,
+                'target_price': 100.0
+            }
+            
+            with patch('services.favorite_fii_services.User.query') as mock_user_query, \
+                 patch('services.favorite_fii_services.Fii.query') as mock_fii_query, \
+                 patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_user_query.get.return_value = MagicMock()
+                mock_fii_query.get.return_value = MagicMock()
+                mock_favorite_query.filter_by.return_value.first.return_value = None
+                mock_db_session.add = MagicMock()
+                
+                result, status_code = new_favorite_fii(favorite_data)
+                
+                assert status_code == 201
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite added successfully'
 
-    response = view_favorite_fii(999)
-    status = response[1]
+    def test_new_favorite_fii_user_not_found(self, app):
+        """Test creating a favorite FII with non-existent user"""
+        with app.app_context():
+            favorite_data = {
+                'user_id': 999,
+                'fii_ticker': 'KNRI11',
+                'ceiling_price': 110.0,
+                'target_price': 100.0
+            }
+            
+            with patch('services.favorite_fii_services.User.query') as mock_user_query:
+                mock_user_query.get.return_value = None
+                
+                result, status_code = new_favorite_fii(favorite_data)
+                
+                assert status_code == 404
+                result_data = result.get_json()
+                assert result_data['message'] == 'User not found'
 
-    assert status == 404
+    def test_new_favorite_fii_fii_not_found(self, app):
+        """Test creating a favorite FII with non-existent FII"""
+        with app.app_context():
+            favorite_data = {
+                'user_id': 1,
+                'fii_ticker': 'INVALID',
+                'ceiling_price': 110.0,
+                'target_price': 100.0
+            }
+            
+            with patch('services.favorite_fii_services.User.query') as mock_user_query, \
+                 patch('services.favorite_fii_services.Fii.query') as mock_fii_query:
+                
+                mock_user_query.get.return_value = MagicMock()
+                mock_fii_query.get.return_value = None
+                
+                result, status_code = new_favorite_fii(favorite_data)
+                
+                assert status_code == 404
+                result_data = result.get_json()
+                assert result_data['message'] == 'FII not found'
 
+    def test_new_favorite_fii_already_exists(self, app):
+        """Test creating a favorite FII that already exists"""
+        with app.app_context():
+            favorite_data = {
+                'user_id': 1,
+                'fii_ticker': 'KNRI11',
+                'ceiling_price': 110.0,
+                'target_price': 100.0
+            }
+            
+            with patch('services.favorite_fii_services.User.query') as mock_user_query, \
+                 patch('services.favorite_fii_services.Fii.query') as mock_fii_query, \
+                 patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                
+                mock_user_query.get.return_value = MagicMock()
+                mock_fii_query.get.return_value = MagicMock()
+                mock_favorite_query.filter_by.return_value.first.return_value = MagicMock()
+                
+                result, status_code = new_favorite_fii(favorite_data)
+                
+                assert status_code == 400
+                result_data = result.get_json()
+                assert result_data['message'] == 'This FII is already favorited by this user'
 
-@patch("services.favorite_fii_services.User.query")
-@patch("services.favorite_fii_services.FII.query")
-@patch("services.favorite_fii_services.Favorite_FII.query")
-@patch("services.favorite_fii_services.db.session")
-def test_new_favorite_fii_validates_user_exists(
-    mock_session, mock_fav_query, mock_fii_query, mock_user_query
-):
-    """Test new_favorite_fii returns 404 when user doesn't exist"""
-    from services.favorite_fii_services import new_favorite_fii
+    def test_new_favorite_fii_with_exception(self, app):
+        """Test creating a favorite FII when an exception occurs"""
+        with app.app_context():
+            favorite_data = {
+                'user_id': 1,
+                'fii_ticker': 'KNRI11',
+                'ceiling_price': 110.0,
+                'target_price': 100.0
+            }
+            
+            with patch('services.favorite_fii_services.User.query') as mock_user_query, \
+                 patch('services.favorite_fii_services.Fii.query') as mock_fii_query, \
+                 patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_user_query.get.return_value = MagicMock()
+                mock_fii_query.get.return_value = MagicMock()
+                mock_favorite_query.filter_by.return_value.first.return_value = None
+                mock_db_session.add.side_effect = Exception("Database error")
+                
+                result, status_code = new_favorite_fii(favorite_data)
+                
+                assert status_code == 500
+                result_data = result.get_json()
+                assert "Error in new_favorite_fii" in result_data['message']
 
-    mock_user_query.get.return_value = None
+    def test_edit_favorite_fii_success(self, app):
+        """Test editing an existing favorite FII"""
+        with app.app_context():
+            favorite_data = {
+                'ceiling_price': 115.0,
+                'target_price': 105.0
+            }
+            
+            mock_favorite = MagicMock(spec=FavoriteFii)
+            
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_favorite_query.get.return_value = mock_favorite
+                mock_db_session.commit = MagicMock()
+                
+                result, status_code = edit_favorite_fii(1, favorite_data)
+                
+                assert status_code == 200
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite edited successfully'
+                
+                # Verify that the attributes were set
+                for key, value in favorite_data.items():
+                    assert getattr(mock_favorite, key) == value
 
-    fav_data = {
-        "user_id": 999,
-        "fii_ticker": "KNRI11",
-        "ceiling_price": 110.0,
-        "target_price": 100.0,
-    }
+    def test_edit_favorite_fii_not_found(self, app):
+        """Test editing a favorite FII that doesn't exist"""
+        with app.app_context():
+            favorite_data = {'ceiling_price': 115.0}
+            
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.get.return_value = None
+                
+                result, status_code = edit_favorite_fii(999, favorite_data)
+                
+                assert status_code == 404
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite not found'
 
-    response = new_favorite_fii(fav_data)
-    status = response[1]
+    def test_edit_favorite_fii_with_exception(self, app):
+        """Test editing a favorite FII when an exception occurs"""
+        with app.app_context():
+            favorite_data = {'ceiling_price': 115.0}
+            
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_favorite_query.get.return_value = MagicMock()
+                mock_db_session.commit.side_effect = Exception("Database error")
+                
+                result, status_code = edit_favorite_fii(1, favorite_data)
+                
+                assert status_code == 500
+                result_data = result.get_json()
+                assert "Error in edit_favorite_fii" in result_data['message']
 
-    assert status == 404
+    def test_delete_favorite_fii_success(self, app):
+        """Test deleting an existing favorite FII"""
+        with app.app_context():
+            mock_favorite = MagicMock(spec=FavoriteFii)
+            
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_favorite_query.get.return_value = mock_favorite
+                mock_db_session.delete = MagicMock()
+                
+                result, status_code = delete_favorite_fii(1)
+                
+                assert status_code == 200
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite deleted successfully'
 
+    def test_delete_favorite_fii_not_found(self, app):
+        """Test deleting a favorite FII that doesn't exist"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.get.return_value = None
+                
+                result, status_code = delete_favorite_fii(999)
+                
+                assert status_code == 404
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite not found'
 
-@patch("services.favorite_fii_services.User.query")
-@patch("services.favorite_fii_services.FII.query")
-@patch("services.favorite_fii_services.Favorite_FII.query")
-@patch("services.favorite_fii_services.db.session")
-def test_new_favorite_fii_validates_fii_exists(
-    mock_session, mock_fav_query, mock_fii_query, mock_user_query
-):
-    """Test new_favorite_fii returns 404 when FII doesn't exist"""
-    from services.favorite_fii_services import new_favorite_fii
+    def test_delete_favorite_fii_with_exception(self, app):
+        """Test deleting a favorite FII when an exception occurs"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_favorite_query.get.return_value = MagicMock()
+                mock_db_session.delete.side_effect = Exception("Database error")
+                
+                result, status_code = delete_favorite_fii(1)
+                
+                assert status_code == 500
+                result_data = result.get_json()
+                assert "Error in delete_favorite_fii" in result_data['message']
 
-    user = User(
-        id=1, user_name="john", name="John", email="j@example.com", profile="USER"
-    )
-    mock_user_query.get.return_value = user
-    mock_fii_query.get.return_value = None
+    def test_add_favorite_fii_success(self, app):
+        """Test adding a favorite FII"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_favorite_query.filter_by.return_value.first.return_value = None
+                mock_db_session.add = MagicMock()
+                
+                result, status_code = add_favorite_fii(1, 'KNRI11')
+                
+                assert status_code == 201
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite added successfully'
 
-    fav_data = {
-        "user_id": 1,
-        "fii_ticker": "INVALID",
-        "ceiling_price": 110.0,
-        "target_price": 100.0,
-    }
+    def test_add_favorite_fii_already_exists(self, app):
+        """Test adding a favorite FII that already exists"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.filter_by.return_value.first.return_value = MagicMock()
+                
+                result, status_code = add_favorite_fii(1, 'KNRI11')
+                
+                assert status_code == 400
+                result_data = result.get_json()
+                assert result_data['message'] == 'This FII is already favorited by this user'
 
-    response = new_favorite_fii(fav_data)
-    status = response[1]
+    def test_add_favorite_fii_with_exception(self, app):
+        """Test adding a favorite FII when an exception occurs"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_favorite_query.filter_by.return_value.first.return_value = None
+                mock_db_session.add.side_effect = Exception("Database error")
+                
+                result, status_code = add_favorite_fii(1, 'KNRI11')
+                
+                assert status_code == 500
+                result_data = result.get_json()
+                assert "Error in add_favorite_fii" in result_data['message']
 
-    assert status == 404
+    def test_remove_favorite_fii_success(self, app):
+        """Test removing a favorite FII"""
+        with app.app_context():
+            mock_favorite = MagicMock(spec=FavoriteFii)
+            
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_favorite_query.filter_by.return_value.first.return_value = mock_favorite
+                mock_db_session.delete = MagicMock()
+                
+                result, status_code = remove_favorite_fii(1, 'KNRI11')
+                
+                assert status_code == 200
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite deleted successfully'
 
+    def test_remove_favorite_fii_not_found(self, app):
+        """Test removing a favorite FII that doesn't exist"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query:
+                mock_favorite_query.filter_by.return_value.first.return_value = None
+                
+                result, status_code = remove_favorite_fii(1, 'INVALID')
+                
+                assert status_code == 404
+                result_data = result.get_json()
+                assert result_data['message'] == 'Favorite not found'
 
-@patch("services.favorite_fii_services.Favorite_FII.query")
-@patch("services.favorite_fii_services.db.session")
-def test_delete_favorite_fii_returns_404_when_not_found(mock_session, mock_query):
-    """Test delete_favorite_fii returns 404 when favorite doesn't exist"""
-    from services.favorite_fii_services import delete_favorite_fii
-
-    mock_query.get.return_value = None
-
-    response = delete_favorite_fii(999)
-    status = response[1]
-
-    assert status == 404
-
-
-def test_favorite_fii_to_json_contains_expected_fields():
-    """Test Favorite_FII.to_json() returns expected fields"""
-    fii = FII(ticker="KNRI11", name="Knewin", price=100.0)
-    favorite = Favorite_FII(
-        id=1,
-        user_id=1,
-        fii_ticker="KNRI11",
-        ceiling_price=110.0,
-        target_price=100.0,
-    )
-    favorite.fii = fii
-
-    json = favorite.to_json()
-
-    assert json["id"] == 1
-    assert json["user_id"] == 1
-    assert json["ceiling_price"] == 110.0
-    assert json["target_price"] == 100.0
+    def test_remove_favorite_fii_with_exception(self, app):
+        """Test removing a favorite FII when an exception occurs"""
+        with app.app_context():
+            with patch('services.favorite_fii_services.FavoriteFii.query') as mock_favorite_query, \
+                 patch('services.favorite_fii_services.db.session') as mock_db_session:
+                
+                mock_favorite_query.filter_by.return_value.first.return_value = MagicMock()
+                mock_db_session.delete.side_effect = Exception("Database error")
+                
+                result, status_code = remove_favorite_fii(1, 'KNRI11')
+                
+                assert status_code == 500
+                result_data = result.get_json()
+                assert "Error in remove_favorite_fii" in result_data['message']

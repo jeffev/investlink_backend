@@ -3,25 +3,32 @@ import json
 import requests
 from flask import jsonify
 
-from models.fii import Fii
-from models.favorite_fiis import FavoriteFii
+from models.fii import Fii, FII
+from models.favorite_fiis import FavoriteFii, Favorite_FII
 from config import db
 
 
-def list_fiis(user_id):
+def list_fiis(user_id, page=1, per_page=50):
     try:
-        all_fiis = Fii.query.all()
+        per_page = min(per_page, 500)
         favorites = {
             fav.fii_ticker for fav in FavoriteFii.query.filter_by(user_id=user_id).all()
         }
-
+        paginated = Fii.query.paginate(page=page, per_page=per_page, error_out=False)
         fiis_json = [
-            {**fii.to_json(), "favorita": fii.ticker in favorites} for fii in all_fiis
+            {**fii.to_json(), "favorita": fii.ticker in favorites}
+            for fii in paginated.items
         ]
-
         fiis_json.sort(key=lambda x: x["favorita"], reverse=True)
-
-        return jsonify(fiis_json)
+        return jsonify({
+            "data": fiis_json,
+            "pagination": {
+                "total": paginated.total,
+                "pages": paginated.pages,
+                "current_page": paginated.page,
+                "per_page": per_page,
+            },
+        }), 200
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500
@@ -32,7 +39,7 @@ def view_fii(ticker):
         fii = Fii.query.get(ticker)
         if fii is None:
             return jsonify({"message": "FII not found"}), 404
-        return jsonify(fii.to_json())
+        return jsonify(fii.to_json()), 200
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500

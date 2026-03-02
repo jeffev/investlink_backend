@@ -18,7 +18,7 @@ def list_users():
     try:
         all_users = User.query.all()
         users_json = [user.to_json() for user in all_users]
-        return jsonify(users_json)
+        return jsonify(users_json), 200
     except Exception as e:
         logger.error(f"Error listing users: {e}")
         return jsonify({"message": "Error listing users"}), 500
@@ -29,7 +29,7 @@ def view_user(user_id):
         user = User.query.get(user_id)
         if user is None:
             return jsonify({"message": "User not found"}), 404
-        return jsonify(user.to_json())
+        return jsonify(user.to_json()), 200
     except Exception as e:
         logger.error(f"Error viewing user: {e}")
         return jsonify({"message": "Error viewing user"}), 500
@@ -142,7 +142,7 @@ def login_user(login_data):
 
 def validate_email(email):
     # Expressão regular para validar email
-    email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    email_regex = r"^(?!.*\.\.)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return re.match(email_regex, email) is not None
 
 

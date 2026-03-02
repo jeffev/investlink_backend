@@ -23,7 +23,7 @@ def handle_db_operations(func):
 def list_favorites(user_id):
     user_favorites = Favorite.query.filter_by(user_id=user_id).all()
     favorites_json = [favorite.to_json() for favorite in user_favorites]
-    return jsonify(favorites_json)
+    return jsonify(favorites_json), 200
 
 
 @handle_db_operations
@@ -31,7 +31,7 @@ def view_favorite(favorite_id):
     favorite = Favorite.query.get(favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
-    return jsonify(favorite.to_json())
+    return jsonify(favorite.to_json()), 200
 
 
 @handle_db_operations

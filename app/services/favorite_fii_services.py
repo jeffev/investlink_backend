@@ -1,8 +1,8 @@
 from flask import jsonify
 from config import db
-from models.favorite_fiis import FavoriteFii
+from models.favorite_fiis import FavoriteFii, Favorite_FII
 from models.user import User
-from models.fii import Fii
+from models.fii import Fii, FII
 
 
 def handle_db_operations(func):
@@ -23,7 +23,7 @@ def handle_db_operations(func):
 def list_favorites_fii(user_id):
     user_favorites = FavoriteFii.query.filter_by(user_id=user_id).all()
     favorites_json = [favorite.to_json() for favorite in user_favorites]
-    return jsonify(favorites_json)
+    return jsonify(favorites_json), 200
 
 
 @handle_db_operations
@@ -31,7 +31,7 @@ def view_favorite_fii(favorite_id):
     favorite = FavoriteFii.query.get(favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
-    return jsonify(favorite.to_json())
+    return jsonify(favorite.to_json()), 200
 
 
 @handle_db_operations

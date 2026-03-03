@@ -1,188 +1,150 @@
-Aqui está o README do backend atualizado com as rotas fornecidas:
-
 # InvestLink Backend
 
-Welcome to the InvestLink API! This project serves as the backend for InvestLink, a website designed to help investors make informed decisions by providing easy and practical access to information.
+API REST do InvestLink — serviço responsável por autenticação, gestão de usuários, dados de ações, FIIs e favoritos.
 
-## Installation
+## Stack
 
-1. Clone the repository:
+- Python 3.9
+- Flask 3.0.3
+- SQLAlchemy 2.0.30 + Flask-Migrate (Alembic)
+- PostgreSQL 13
+- Flask-JWT-Extended 4.6.0
+- bcrypt 4.1.3
 
-   ```bash
-   git clone https://github.com/jeffev/investlink_backend.git
-   ```
+## Execução local (sem Docker)
 
-2. Install dependencies:
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
-   ```bash
-   cd investlink_backend
-   pip install -r requirements.txt
-   ```
+Configure as variáveis de ambiente:
 
-3. Start the server:
+```env
+DATABASE_URL=postgresql://postgres:senha@localhost:5432/investlink
+JWT_SECRET_KEY=sua_chave_secreta
+FLASK_ENV=development
+```
 
-   ```bash
-   python app.py
-   ```
+```bash
+python app/app.py
+```
+
+O servidor sobe em `http://localhost:5000`. Na primeira execução as migrations são aplicadas e o usuário `admin/admin` é criado automaticamente.
+
+## Execução com Docker
+
+Na raiz do monorepo:
+
+```bash
+docker compose up --build backend
+```
+
+## Usuário padrão
+
+| Campo  | Valor                  |
+|--------|------------------------|
+| Login  | admin                  |
+| Senha  | admin                  |
+| Perfil | ADMIN                  |
+| E-mail | admin@investlink.local |
+
+## Documentação da API
+
+Swagger disponível em `http://localhost:5000/swagger` após iniciar o servidor.
 
 ## Endpoints
 
-### Stocks
+Todos os endpoints (exceto login e registro) exigem `Authorization: Bearer <token>`.
 
-- `GET /stocks`: Get all stocks.
-- `POST /stocks`: Create a new stock.
-- `GET /stocks/{ticker}`: Get details of a stock with the specified ticker.
-- `PUT /stocks/{ticker}`: Edit an existing stock with the specified ticker.
-- `DELETE /stocks/{ticker}`: Delete an existing stock with the specified ticker.
+### Autenticação
+
+| Método | Rota             | Descrição              | Auth     |
+|--------|------------------|------------------------|----------|
+| POST   | `/v1/user/login` | Login (retorna JWT)    | Não      |
+| POST   | `/v1/users`      | Registro de novo usuário | Não    |
+
+### Usuários
+
+| Método | Rota                  | Descrição               | Perfil   |
+|--------|-----------------------|-------------------------|----------|
+| GET    | `/v1/users`           | Listar usuários         | Qualquer |
+| GET    | `/v1/user/<id>`       | Detalhar usuário        | Qualquer |
+| PUT    | `/v1/user/<id>`       | Editar usuário          | Qualquer |
+| DELETE | `/v1/user/<id>`       | Excluir usuário         | Qualquer |
+
+### Ações
+
+| Método | Rota                         | Descrição               | Perfil   |
+|--------|------------------------------|-------------------------|----------|
+| GET    | `/v1/stocks`                 | Listar ações            | Qualquer |
+| GET    | `/v1/stock/<ticker>`         | Detalhar ação           | Qualquer |
+| POST   | `/v1/stocks`                 | Criar ação              | Qualquer |
+| PUT    | `/v1/stock/<ticker>`         | Editar ação             | Qualquer |
+| DELETE | `/v1/stock/<ticker>`         | Excluir ação            | Qualquer |
+| PUT    | `/v1/stocks/update-stocks`   | Atualizar cotações      | ADMIN    |
 
 ### FIIs
 
-- `GET /fiis`: Get all FIIs.
-- `POST /fiis`: Create a new FII.
-- `GET /fiis/{ticker}`: Get details of an FII with the specified ticker.
-- `PUT /fiis/{ticker}`: Edit an existing FII with the specified ticker.
-- `DELETE /fiis/{ticker}`: Delete an existing FII with the specified ticker.
+| Método | Rota                       | Descrição               | Perfil   |
+|--------|----------------------------|-------------------------|----------|
+| GET    | `/v1/fiis`                 | Listar FIIs             | Qualquer |
+| GET    | `/v1/fii/<ticker>`         | Detalhar FII            | Qualquer |
+| POST   | `/v1/fiis`                 | Criar FII               | Qualquer |
+| PUT    | `/v1/fii/<ticker>`         | Editar FII              | Qualquer |
+| DELETE | `/v1/fii/<ticker>`         | Excluir FII             | Qualquer |
+| PUT    | `/v1/fiis/update-fiis`     | Atualizar cotações      | ADMIN    |
 
-### Users
+### Favoritos — Ações
 
-- `GET /users`: Get all users.
-- `POST /users`: Create a new user.
+| Método | Rota                         | Descrição                  | Perfil   |
+|--------|------------------------------|----------------------------|----------|
+| GET    | `/v1/favorites`              | Listar favoritos           | Qualquer |
+| GET    | `/v1/favorite/<id>`          | Detalhar favorito          | Qualquer |
+| POST   | `/v1/favorites`              | Criar favorito (com dados) | Qualquer |
+| PUT    | `/v1/favorite/<id>`          | Editar favorito            | Qualquer |
+| DELETE | `/v1/favorite/<id>`          | Remover favorito           | Qualquer |
+| POST   | `/v1/favorites/<ticker>`     | Adicionar ação aos favoritos | Qualquer |
+| DELETE | `/v1/favorites/<ticker>`     | Remover ação dos favoritos | Qualquer |
 
-### Favorites
+### Favoritos — FIIs
 
-- `GET /favorites/stocks`: Get all favorite stocks.
-- `POST /favorites/stocks`: Add a stock to favorites.
-- `DELETE /favorites/stocks/{ticker}`: Remove a stock from favorites.
-- `GET /favorites/fiis`: Get all favorite FIIs.
-- `POST /favorites/fiis`: Add an FII to favorites.
-- `DELETE /favorites/fiis/{ticker}`: Remove an FII from favorites.
+| Método | Rota                             | Descrição                   | Perfil   |
+|--------|----------------------------------|-----------------------------|----------|
+| GET    | `/v1/favorites/fii`              | Listar FIIs favoritos       | Qualquer |
+| GET    | `/v1/favorite/fii/<id>`          | Detalhar FII favorito       | Qualquer |
+| POST   | `/v1/favorites/fii`              | Criar favorito (com dados)  | Qualquer |
+| PUT    | `/v1/favorite/fii/<id>`          | Editar FII favorito         | Qualquer |
+| DELETE | `/v1/favorite/fii/<id>`          | Remover FII favorito        | Qualquer |
+| POST   | `/v1/favorites/fii/<ticker>`     | Adicionar FII aos favoritos | Qualquer |
+| DELETE | `/v1/favorites/fii/<ticker>`     | Remover FII dos favoritos   | Qualquer |
 
-### Sentiment Analysis
+### Layout de Usuário
 
-- `GET /sentiment`: Get the market sentiment analysis.
+| Método | Rota                        | Descrição                        | Perfil   |
+|--------|-----------------------------|----------------------------------|----------|
+| GET    | `/v1/user_layout/<layout>`  | Buscar layout salvo da página    | Qualquer |
+| POST   | `/v1/user_layout`           | Salvar layout de página          | Qualquer |
 
-### Machine Learning Predictions
+## Estrutura
 
-- `GET /predictions/stocks`: Get ML-based predictions for all stocks.
-
-## Usage
-
-### Get all stocks
-
-```bash
-curl http://localhost:5000/stocks
+```
+backend/
+├── app/
+│   ├── app.py           → entrypoint, migrations, seed
+│   ├── config.py        → criação do app Flask e DB
+│   ├── utils.py         → registro de rotas e middleware JWT
+│   ├── models/          → User, Stock, Fii, Favorite, UserLayout
+│   ├── services/        → lógica de negócio
+│   └── routes/          → handlers HTTP
+├── migrations/          → Alembic migrations
+├── tests/unit/          → testes unitários (pytest)
+└── requirements.txt
 ```
 
-### Create a new stock
+## Testes
 
 ```bash
-curl -X POST http://localhost:5000/stocks -H "Content-Type: application/json" -d '{"companyid": 1, "companyname": "Company Inc.", "ticker": "ABC", "price": 10.0}'
-```
-
-### Get details of a stock
-
-```bash
-curl http://localhost:5000/stocks/ABC
-```
-
-### Edit an existing stock
-
-```bash
-curl -X PUT http://localhost:5000/stocks/ABC -H "Content-Type: application/json" -d '{"price": 20.0}'
-```
-
-### Delete an existing stock
-
-```bash
-curl -X DELETE http://localhost:5000/stocks/ABC
-```
-
-### Get all FIIs
-
-```bash
-curl http://localhost:5000/fiis
-```
-
-### Create a new FII
-
-```bash
-curl -X POST http://localhost:5000/fiis -H "Content-Type: application/json" -d '{"companyid": 1, "companyname": "Company FII", "ticker": "FIIABC", "price": 100.0}'
-```
-
-### Get details of an FII
-
-```bash
-curl http://localhost:5000/fiis/FIIABC
-```
-
-### Edit an existing FII
-
-```bash
-curl -X PUT http://localhost:5000/fiis/FIIABC -H "Content-Type: application/json" -d '{"price": 200.0}'
-```
-
-### Delete an existing FII
-
-```bash
-curl -X DELETE http://localhost:5000/fiis/FIIABC
-```
-
-### Get all users
-
-```bash
-curl http://localhost:5000/users
-```
-
-### Create a new user
-
-```bash
-curl -X POST http://localhost:5000/users -H "Content-Type: application/json" -d '{"username": "newuser", "email": "newuser@example.com"}'
-```
-
-### Get all favorite stocks
-
-```bash
-curl http://localhost:5000/favorites/stocks
-```
-
-### Add a stock to favorites
-
-```bash
-curl -X POST http://localhost:5000/favorites/stocks -H "Content-Type: application/json" -d '{"ticker": "ABC"}'
-```
-
-### Remove a stock from favorites
-
-```bash
-curl -X DELETE http://localhost:5000/favorites/stocks/ABC
-```
-
-### Get all favorite FIIs
-
-```bash
-curl http://localhost:5000/favorites/fiis
-```
-
-### Add an FII to favorites
-
-```bash
-curl -X POST http://localhost:5000/favorites/fiis -H "Content-Type: application/json" -d '{"ticker": "FIIABC"}'
-```
-
-### Remove an FII from favorites
-
-```bash
-curl -X DELETE http://localhost:5000/favorites/fiis/FIIABC
-```
-
-### Get market sentiment analysis
-
-```bash
-curl http://localhost:5000/sentiment
-```
-
-### Get ML-based predictions for all stocks
-
-```bash
-curl http://localhost:5000/predictions/stocks
+cd backend
+pytest tests/ -v
 ```

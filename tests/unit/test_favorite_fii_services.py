@@ -65,7 +65,10 @@ class TestFavoriteFiiServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )
 
     def test_view_favorite_fii_success(self, app, sample_favorite_fii):
         """Test viewing a specific favorite FII"""
@@ -110,7 +113,10 @@ class TestFavoriteFiiServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )
 
     def test_new_favorite_fii_success(self, app):
         """Test creating a new favorite FII"""
@@ -240,7 +246,10 @@ class TestFavoriteFiiServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )
 
     def test_edit_favorite_fii_success(self, app):
         """Test editing an existing favorite FII"""
@@ -289,7 +298,10 @@ class TestFavoriteFiiServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )
 
     def test_delete_favorite_fii_success(self, app):
         """Test deleting an existing favorite FII"""
@@ -335,7 +347,10 @@ class TestFavoriteFiiServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )
 
     def test_add_favorite_fii_success(self, app):
         """Test adding a favorite FII"""
@@ -392,7 +407,10 @@ class TestFavoriteFiiServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )
 
     def test_remove_favorite_fii_success(self, app):
         """Test removing a favorite FII"""
@@ -450,4 +468,7 @@ class TestFavoriteFiiServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )

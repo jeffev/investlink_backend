@@ -43,7 +43,10 @@ class TestStockServices:
                 patch("services.stock_services.Stock.query") as mock_stock_query,
                 patch("services.stock_services.Favorite.query") as mock_favorite_query,
                 patch("services.stock_services.get_latest_predictions_map") as mock_pm,
-                patch("services.stock_services.attach_ml_fields", side_effect=lambda s, p: s) as _,
+                patch(
+                    "services.stock_services.attach_ml_fields",
+                    side_effect=lambda s, p: s,
+                ) as _,
             ):
 
                 mock_stock_query.paginate.return_value = mock_paginated
@@ -121,7 +124,10 @@ class TestStockServices:
             with (
                 patch("services.stock_services.db.session") as mock_db_session,
                 patch("services.stock_services.get_latest_predictions_map") as mock_pm,
-                patch("services.stock_services.attach_ml_fields", side_effect=lambda s, p: s) as _,
+                patch(
+                    "services.stock_services.attach_ml_fields",
+                    side_effect=lambda s, p: s,
+                ) as _,
             ):
                 mock_db_session.get.return_value = mock_stock
                 mock_pm.return_value = {}

@@ -102,7 +102,10 @@ class TestUserLayoutService:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )
 
     def test_save_user_layout_new_success(self, app):
         """Test saving a new user layout"""
@@ -172,7 +175,10 @@ class TestUserLayoutService:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )
 
     def test_delete_user_layout_success(self, app):
         """Test deleting an existing user layout"""
@@ -218,4 +224,7 @@ class TestUserLayoutService:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert result_data["message"] == "An error occurred, please try again later"
+                assert (
+                    result_data["message"]
+                    == "An error occurred, please try again later"
+                )

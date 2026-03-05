@@ -256,7 +256,7 @@ class TestStockServices:
             mock_stock.get_discount_to_graham.return_value = 10.0
 
             with (
-                patch("services.stock_services.Stock.query") as mock_stock_query,
+                patch("services.stock_services.Stock.query"),
                 patch("services.stock_services.db.session") as mock_db_session,
             ):
 
@@ -296,7 +296,7 @@ class TestStockServices:
             stock_data = {"companyname": "Updated Stock"}
 
             with (
-                patch("services.stock_services.Stock.query") as mock_stock_query,
+                patch("services.stock_services.Stock.query"),
                 patch("services.stock_services.db.session") as mock_db_session,
             ):
 
@@ -316,7 +316,7 @@ class TestStockServices:
             mock_stock = MagicMock(spec=Stock)
 
             with (
-                patch("services.stock_services.Stock.query") as mock_stock_query,
+                patch("services.stock_services.Stock.query"),
                 patch("services.stock_services.db.session") as mock_db_session,
             ):
 
@@ -344,7 +344,7 @@ class TestStockServices:
         """Test deleting a stock when an exception occurs"""
         with app.app_context():
             with (
-                patch("services.stock_services.Stock.query") as mock_stock_query,
+                patch("services.stock_services.Stock.query"),
                 patch("services.stock_services.db.session") as mock_db_session,
             ):
 

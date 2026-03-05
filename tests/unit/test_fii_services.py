@@ -222,7 +222,7 @@ class TestFiiServices:
             mock_fii = MagicMock(spec=Fii)
 
             with (
-                patch("services.fii_services.Fii.query") as mock_fii_query,
+                patch("services.fii_services.Fii.query"),
                 patch("services.fii_services.db.session") as mock_db_session,
             ):
 

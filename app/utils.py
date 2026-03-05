@@ -3,6 +3,7 @@ from functools import wraps
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from models.user import User
+from config import db
 
 from routes.stock_routes import (
     list_stocks_json,

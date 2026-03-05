@@ -263,7 +263,7 @@ class TestUserServices:
             mock_user = MagicMock(spec=User)
 
             with (
-                patch("services.user_services.User.query") as mock_user_query,
+                patch("services.user_services.User.query"),
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 
@@ -299,7 +299,7 @@ class TestUserServices:
             user_data = {"name": "Updated User"}
 
             with (
-                patch("services.user_services.User.query") as mock_user_query,
+                patch("services.user_services.User.query"),
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 
@@ -319,7 +319,7 @@ class TestUserServices:
             mock_user = MagicMock(spec=User)
 
             with (
-                patch("services.user_services.User.query") as mock_user_query,
+                patch("services.user_services.User.query"),
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 
@@ -347,7 +347,7 @@ class TestUserServices:
         """Test deleting a user when an exception occurs"""
         with app.app_context():
             with (
-                patch("services.user_services.User.query") as mock_user_query,
+                patch("services.user_services.User.query"),
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 

@@ -42,12 +42,15 @@ class TestStockServices:
             with (
                 patch("services.stock_services.Stock.query") as mock_stock_query,
                 patch("services.stock_services.Favorite.query") as mock_favorite_query,
+                patch("services.stock_services.get_latest_predictions_map") as mock_pm,
+                patch("services.stock_services.attach_ml_fields", side_effect=lambda s, p: s) as _,
             ):
 
                 mock_stock_query.paginate.return_value = mock_paginated
                 mock_favorite_query.filter_by.return_value.all.return_value = [
                     mock_favorite
                 ]
+                mock_pm.return_value = {}
 
                 result, status_code = list_stocks(sample_user.id)
 
@@ -71,10 +74,12 @@ class TestStockServices:
             with (
                 patch("services.stock_services.Stock.query") as mock_stock_query,
                 patch("services.stock_services.Favorite.query") as mock_favorite_query,
+                patch("services.stock_services.get_latest_predictions_map") as mock_pm,
             ):
 
                 mock_stock_query.paginate.return_value = mock_paginated
                 mock_favorite_query.filter_by.return_value.all.return_value = []
+                mock_pm.return_value = {}
 
                 result, status_code = list_stocks(1)
 
@@ -113,8 +118,13 @@ class TestStockServices:
                 "dy": 0.08,
             }
 
-            with patch("services.stock_services.Stock.query") as mock_stock_query:
-                mock_stock_query.get.return_value = mock_stock
+            with (
+                patch("services.stock_services.db.session") as mock_db_session,
+                patch("services.stock_services.get_latest_predictions_map") as mock_pm,
+                patch("services.stock_services.attach_ml_fields", side_effect=lambda s, p: s) as _,
+            ):
+                mock_db_session.get.return_value = mock_stock
+                mock_pm.return_value = {}
 
                 result, status_code = view_stock("PETR4")
 
@@ -125,8 +135,8 @@ class TestStockServices:
     def test_view_stock_not_found(self, app):
         """Test viewing a stock that doesn't exist"""
         with app.app_context():
-            with patch("services.stock_services.Stock.query") as mock_stock_query:
-                mock_stock_query.get.return_value = None
+            with patch("services.stock_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = view_stock("INVALID")
 
@@ -244,8 +254,7 @@ class TestStockServices:
                 patch("services.stock_services.db.session") as mock_db_session,
             ):
 
-                mock_stock_query.get.return_value = mock_stock
-                mock_db_session.commit = MagicMock()
+                mock_db_session.get.return_value = mock_stock
 
                 result, status_code = edit_stock("PETR4", stock_data)
 
@@ -266,8 +275,8 @@ class TestStockServices:
         with app.app_context():
             stock_data = {"companyname": "Updated Stock"}
 
-            with patch("services.stock_services.Stock.query") as mock_stock_query:
-                mock_stock_query.get.return_value = None
+            with patch("services.stock_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = edit_stock("INVALID", stock_data)
 
@@ -285,7 +294,7 @@ class TestStockServices:
                 patch("services.stock_services.db.session") as mock_db_session,
             ):
 
-                mock_stock_query.get.return_value = MagicMock()
+                mock_db_session.get.return_value = MagicMock()
                 mock_db_session.commit.side_effect = Exception("Database error")
                 mock_db_session.rollback = MagicMock()
 
@@ -305,9 +314,7 @@ class TestStockServices:
                 patch("services.stock_services.db.session") as mock_db_session,
             ):
 
-                mock_stock_query.get.return_value = mock_stock
-                mock_db_session.delete = MagicMock()
-                mock_db_session.commit = MagicMock()
+                mock_db_session.get.return_value = mock_stock
 
                 result, status_code = delete_stock("PETR4")
 
@@ -318,8 +325,8 @@ class TestStockServices:
     def test_delete_stock_not_found(self, app):
         """Test deleting a stock that doesn't exist"""
         with app.app_context():
-            with patch("services.stock_services.Stock.query") as mock_stock_query:
-                mock_stock_query.get.return_value = None
+            with patch("services.stock_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = delete_stock("INVALID")
 
@@ -335,7 +342,7 @@ class TestStockServices:
                 patch("services.stock_services.db.session") as mock_db_session,
             ):
 
-                mock_stock_query.get.return_value = MagicMock()
+                mock_db_session.get.return_value = MagicMock()
                 mock_db_session.delete = MagicMock()
                 mock_db_session.commit.side_effect = Exception("Database error")
                 mock_db_session.rollback = MagicMock()

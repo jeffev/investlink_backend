@@ -72,8 +72,8 @@ class TestUserServices:
                 "profile": "USER",
             }
 
-            with patch("services.user_services.User.query") as mock_user_query:
-                mock_user_query.get.return_value = mock_user
+            with patch("services.user_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_user
 
                 result, status_code = view_user(1)
 
@@ -84,8 +84,8 @@ class TestUserServices:
     def test_view_user_not_found(self, app):
         """Test viewing a user that doesn't exist"""
         with app.app_context():
-            with patch("services.user_services.User.query") as mock_user_query:
-                mock_user_query.get.return_value = None
+            with patch("services.user_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = view_user(999)
 
@@ -267,8 +267,7 @@ class TestUserServices:
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 
-                mock_user_query.get.return_value = mock_user
-                mock_db_session.commit = MagicMock()
+                mock_db_session.get.return_value = mock_user
 
                 result, status_code = edit_user(1, user_data)
 
@@ -285,8 +284,8 @@ class TestUserServices:
         with app.app_context():
             user_data = {"name": "Updated User"}
 
-            with patch("services.user_services.User.query") as mock_user_query:
-                mock_user_query.get.return_value = None
+            with patch("services.user_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = edit_user(999, user_data)
 
@@ -304,7 +303,7 @@ class TestUserServices:
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 
-                mock_user_query.get.return_value = MagicMock()
+                mock_db_session.get.return_value = MagicMock()
                 mock_db_session.commit.side_effect = Exception("Database error")
                 mock_db_session.rollback = MagicMock()
 
@@ -324,9 +323,7 @@ class TestUserServices:
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 
-                mock_user_query.get.return_value = mock_user
-                mock_db_session.delete = MagicMock()
-                mock_db_session.commit = MagicMock()
+                mock_db_session.get.return_value = mock_user
 
                 result, status_code = delete_user(1)
 
@@ -337,8 +334,8 @@ class TestUserServices:
     def test_delete_user_not_found(self, app):
         """Test deleting a user that doesn't exist"""
         with app.app_context():
-            with patch("services.user_services.User.query") as mock_user_query:
-                mock_user_query.get.return_value = None
+            with patch("services.user_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = delete_user(999)
 
@@ -354,8 +351,7 @@ class TestUserServices:
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 
-                mock_user_query.get.return_value = MagicMock()
-                mock_db_session.delete = MagicMock()
+                mock_db_session.get.return_value = MagicMock()
                 mock_db_session.commit.side_effect = Exception("Database error")
                 mock_db_session.rollback = MagicMock()
 

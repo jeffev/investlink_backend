@@ -108,8 +108,8 @@ class TestFiiServices:
                 "p_vp": 1.2,
             }
 
-            with patch("services.fii_services.Fii.query") as mock_fii_query:
-                mock_fii_query.get.return_value = mock_fii
+            with patch("services.fii_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_fii
 
                 result, status_code = view_fii("KNRI11")
 
@@ -120,8 +120,8 @@ class TestFiiServices:
     def test_view_fii_not_found(self, app):
         """Test viewing a FII that doesn't exist"""
         with app.app_context():
-            with patch("services.fii_services.Fii.query") as mock_fii_query:
-                mock_fii_query.get.return_value = None
+            with patch("services.fii_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = view_fii("INVALID")
 
@@ -226,8 +226,7 @@ class TestFiiServices:
                 patch("services.fii_services.db.session") as mock_db_session,
             ):
 
-                mock_fii_query.get.return_value = mock_fii
-                mock_db_session.commit = MagicMock()
+                mock_db_session.get.return_value = mock_fii
 
                 result, status_code = edit_fii("KNRI11", fii_data)
 
@@ -244,8 +243,8 @@ class TestFiiServices:
         with app.app_context():
             fii_data = {"name": "Updated FII"}
 
-            with patch("services.fii_services.Fii.query") as mock_fii_query:
-                mock_fii_query.get.return_value = None
+            with patch("services.fii_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = edit_fii("INVALID", fii_data)
 
@@ -296,8 +295,8 @@ class TestFiiServices:
     def test_delete_fii_not_found(self, app):
         """Test deleting a FII that doesn't exist"""
         with app.app_context():
-            with patch("services.fii_services.Fii.query") as mock_fii_query:
-                mock_fii_query.get.return_value = None
+            with patch("services.fii_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = delete_fii("INVALID")
 

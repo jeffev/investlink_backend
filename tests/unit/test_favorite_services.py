@@ -23,14 +23,21 @@ class TestFavoriteServices:
                 "stock_ticker": "PETR4",
                 "ceiling_price": 30.0,
                 "target_price": 25.0,
+                "stock": None,
             }
 
-            with patch(
-                "services.favorite_services.Favorite.query"
-            ) as mock_favorite_query:
+            with (
+                patch(
+                    "services.favorite_services.Favorite.query"
+                ) as mock_favorite_query,
+                patch(
+                    "services.favorite_services.get_latest_predictions_map"
+                ) as mock_pred_map,
+            ):
                 mock_favorite_query.filter_by.return_value.all.return_value = [
                     mock_favorite
                 ]
+                mock_pred_map.return_value = {}
 
                 result, status_code = list_favorites(sample_user.id)
 
@@ -42,10 +49,16 @@ class TestFavoriteServices:
     def test_list_favorites_empty(self, app):
         """Test listing favorites when no favorites exist"""
         with app.app_context():
-            with patch(
-                "services.favorite_services.Favorite.query"
-            ) as mock_favorite_query:
+            with (
+                patch(
+                    "services.favorite_services.Favorite.query"
+                ) as mock_favorite_query,
+                patch(
+                    "services.favorite_services.get_latest_predictions_map"
+                ) as mock_pred_map,
+            ):
                 mock_favorite_query.filter_by.return_value.all.return_value = []
+                mock_pred_map.return_value = {}
 
                 result, status_code = list_favorites(1)
 
@@ -65,7 +78,7 @@ class TestFavoriteServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in list_favorites" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"
 
     def test_view_favorite_success(self, app, sample_favorite):
         """Test viewing a specific favorite"""
@@ -79,10 +92,8 @@ class TestFavoriteServices:
                 "target_price": 25.0,
             }
 
-            with patch(
-                "services.favorite_services.Favorite.query"
-            ) as mock_favorite_query:
-                mock_favorite_query.get.return_value = mock_favorite
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_favorite
 
                 result, status_code = view_favorite(1)
 
@@ -93,10 +104,8 @@ class TestFavoriteServices:
     def test_view_favorite_not_found(self, app):
         """Test viewing a favorite that doesn't exist"""
         with app.app_context():
-            with patch(
-                "services.favorite_services.Favorite.query"
-            ) as mock_favorite_query:
-                mock_favorite_query.get.return_value = None
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = view_favorite(999)
 
@@ -107,16 +116,14 @@ class TestFavoriteServices:
     def test_view_favorite_with_exception(self, app):
         """Test viewing a favorite when an exception occurs"""
         with app.app_context():
-            with patch(
-                "services.favorite_services.Favorite.query"
-            ) as mock_favorite_query:
-                mock_favorite_query.get.side_effect = Exception("Database error")
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.side_effect = Exception("Database error")
 
                 result, status_code = view_favorite(1)
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in view_favorite" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"
 
     def test_new_favorite_success(self, app):
         """Test creating a new favorite"""
@@ -129,18 +136,14 @@ class TestFavoriteServices:
             }
 
             with (
-                patch("services.favorite_services.User.query") as mock_user_query,
-                patch("services.favorite_services.Stock.query") as mock_stock_query,
                 patch(
                     "services.favorite_services.Favorite.query"
                 ) as mock_favorite_query,
                 patch("services.favorite_services.db.session") as mock_db_session,
             ):
 
-                mock_user_query.get.return_value = MagicMock()
-                mock_stock_query.get.return_value = MagicMock()
+                mock_db_session.get.return_value = MagicMock()
                 mock_favorite_query.filter_by.return_value.first.return_value = None
-                mock_db_session.add = MagicMock()
 
                 result, status_code = new_favorite(favorite_data)
 
@@ -158,8 +161,8 @@ class TestFavoriteServices:
                 "target_price": 25.0,
             }
 
-            with patch("services.favorite_services.User.query") as mock_user_query:
-                mock_user_query.get.return_value = None
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = new_favorite(favorite_data)
 
@@ -177,13 +180,8 @@ class TestFavoriteServices:
                 "target_price": 25.0,
             }
 
-            with (
-                patch("services.favorite_services.User.query") as mock_user_query,
-                patch("services.favorite_services.Stock.query") as mock_stock_query,
-            ):
-
-                mock_user_query.get.return_value = MagicMock()
-                mock_stock_query.get.return_value = None
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.side_effect = [MagicMock(), None]
 
                 result, status_code = new_favorite(favorite_data)
 
@@ -202,15 +200,13 @@ class TestFavoriteServices:
             }
 
             with (
-                patch("services.favorite_services.User.query") as mock_user_query,
-                patch("services.favorite_services.Stock.query") as mock_stock_query,
                 patch(
                     "services.favorite_services.Favorite.query"
                 ) as mock_favorite_query,
+                patch("services.favorite_services.db.session") as mock_db_session,
             ):
 
-                mock_user_query.get.return_value = MagicMock()
-                mock_stock_query.get.return_value = MagicMock()
+                mock_db_session.get.side_effect = [MagicMock(), MagicMock()]
                 mock_favorite_query.filter_by.return_value.first.return_value = (
                     MagicMock()
                 )
@@ -235,16 +231,13 @@ class TestFavoriteServices:
             }
 
             with (
-                patch("services.favorite_services.User.query") as mock_user_query,
-                patch("services.favorite_services.Stock.query") as mock_stock_query,
                 patch(
                     "services.favorite_services.Favorite.query"
                 ) as mock_favorite_query,
                 patch("services.favorite_services.db.session") as mock_db_session,
             ):
 
-                mock_user_query.get.return_value = MagicMock()
-                mock_stock_query.get.return_value = MagicMock()
+                mock_db_session.get.side_effect = [MagicMock(), MagicMock()]
                 mock_favorite_query.filter_by.return_value.first.return_value = None
                 mock_db_session.add.side_effect = Exception("Database error")
 
@@ -252,7 +245,7 @@ class TestFavoriteServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in new_favorite" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"
 
     def test_edit_favorite_success(self, app):
         """Test editing an existing favorite"""
@@ -261,15 +254,8 @@ class TestFavoriteServices:
 
             mock_favorite = MagicMock(spec=Favorite)
 
-            with (
-                patch(
-                    "services.favorite_services.Favorite.query"
-                ) as mock_favorite_query,
-                patch("services.favorite_services.db.session") as mock_db_session,
-            ):
-
-                mock_favorite_query.get.return_value = mock_favorite
-                mock_db_session.commit = MagicMock()
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_favorite
 
                 result, status_code = edit_favorite(1, favorite_data)
 
@@ -286,10 +272,8 @@ class TestFavoriteServices:
         with app.app_context():
             favorite_data = {"ceiling_price": 35.0}
 
-            with patch(
-                "services.favorite_services.Favorite.query"
-            ) as mock_favorite_query:
-                mock_favorite_query.get.return_value = None
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = edit_favorite(999, favorite_data)
 
@@ -302,36 +286,23 @@ class TestFavoriteServices:
         with app.app_context():
             favorite_data = {"ceiling_price": 35.0}
 
-            with (
-                patch(
-                    "services.favorite_services.Favorite.query"
-                ) as mock_favorite_query,
-                patch("services.favorite_services.db.session") as mock_db_session,
-            ):
-
-                mock_favorite_query.get.return_value = MagicMock()
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = MagicMock()
                 mock_db_session.commit.side_effect = Exception("Database error")
 
                 result, status_code = edit_favorite(1, favorite_data)
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in edit_favorite" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"
 
     def test_delete_favorite_success(self, app):
         """Test deleting an existing favorite"""
         with app.app_context():
             mock_favorite = MagicMock(spec=Favorite)
 
-            with (
-                patch(
-                    "services.favorite_services.Favorite.query"
-                ) as mock_favorite_query,
-                patch("services.favorite_services.db.session") as mock_db_session,
-            ):
-
-                mock_favorite_query.get.return_value = mock_favorite
-                mock_db_session.delete = MagicMock()
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_favorite
 
                 result, status_code = delete_favorite(1)
 
@@ -342,10 +313,8 @@ class TestFavoriteServices:
     def test_delete_favorite_not_found(self, app):
         """Test deleting a favorite that doesn't exist"""
         with app.app_context():
-            with patch(
-                "services.favorite_services.Favorite.query"
-            ) as mock_favorite_query:
-                mock_favorite_query.get.return_value = None
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = delete_favorite(999)
 
@@ -356,21 +325,15 @@ class TestFavoriteServices:
     def test_delete_favorite_with_exception(self, app):
         """Test deleting a favorite when an exception occurs"""
         with app.app_context():
-            with (
-                patch(
-                    "services.favorite_services.Favorite.query"
-                ) as mock_favorite_query,
-                patch("services.favorite_services.db.session") as mock_db_session,
-            ):
-
-                mock_favorite_query.get.return_value = MagicMock()
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = MagicMock()
                 mock_db_session.delete.side_effect = Exception("Database error")
 
                 result, status_code = delete_favorite(1)
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in delete_favorite" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"
 
     def test_add_favorite_success(self, app):
         """Test adding a favorite"""
@@ -427,7 +390,7 @@ class TestFavoriteServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in add_favorite" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"
 
     def test_remove_favorite_success(self, app):
         """Test removing a favorite"""
@@ -485,4 +448,4 @@ class TestFavoriteServices:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in remove_favorite" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"

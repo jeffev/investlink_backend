@@ -102,7 +102,7 @@ class TestUserLayoutService:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in get_user_layout" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"
 
     def test_save_user_layout_new_success(self, app):
         """Test saving a new user layout"""
@@ -172,7 +172,7 @@ class TestUserLayoutService:
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in save_user_layout" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"
 
     def test_delete_user_layout_success(self, app):
         """Test deleting an existing user layout"""
@@ -198,10 +198,8 @@ class TestUserLayoutService:
     def test_delete_user_layout_not_found(self, app):
         """Test deleting a user layout that doesn't exist"""
         with app.app_context():
-            with patch(
-                "services.user_layout_service.UserLayout.query"
-            ) as mock_layout_query:
-                mock_layout_query.get.return_value = None
+            with patch("services.user_layout_service.db.session") as mock_db_session:
+                mock_db_session.get.return_value = None
 
                 result, status_code = delete_user_layout(999)
 
@@ -212,18 +210,12 @@ class TestUserLayoutService:
     def test_delete_user_layout_with_exception(self, app):
         """Test deleting user layout when an exception occurs"""
         with app.app_context():
-            with (
-                patch(
-                    "services.user_layout_service.UserLayout.query"
-                ) as mock_layout_query,
-                patch("services.user_layout_service.db.session") as mock_db_session,
-            ):
-
-                mock_layout_query.get.return_value = MagicMock()
+            with patch("services.user_layout_service.db.session") as mock_db_session:
+                mock_db_session.get.return_value = MagicMock()
                 mock_db_session.delete.side_effect = Exception("Database error")
 
                 result, status_code = delete_user_layout(1)
 
                 assert status_code == 500
                 result_data = result.get_json()
-                assert "Error in delete_user_layout" in result_data["message"]
+                assert result_data["message"] == "An error occurred, please try again later"

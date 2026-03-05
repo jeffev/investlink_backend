@@ -10,7 +10,11 @@ from services.prediction_service import get_latest_predictions_map, attach_ml_fi
 
 
 def handle_db_errors(func):
-    """Handles rollback and logging on exception. Write operations must commit explicitly."""
+    """Handles rollback and logging on exception.
+
+    Write operations must commit explicitly.
+    """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -18,7 +22,11 @@ def handle_db_errors(func):
         except Exception as e:
             db.session.rollback()
             logging.error(f"An error occurred in {func.__name__}: {e}")
-            return jsonify({"message": "An error occurred, please try again later"}), 500
+            return (
+                jsonify({"message": "An error occurred, please try again later"}),
+                500,
+            )
+
     return wrapper
 
 
@@ -31,7 +39,9 @@ def list_favorites(user_id):
         fav_dict = favorite.to_json()
         if fav_dict["stock"] is not None:
             ticker = fav_dict["stock"].get("ticker")
-            fav_dict["stock"] = attach_ml_fields(fav_dict["stock"], pred_map.get(ticker))
+            fav_dict["stock"] = attach_ml_fields(
+                fav_dict["stock"], pred_map.get(ticker)
+            )
         favorites_json.append(fav_dict)
     return jsonify(favorites_json), 200
 

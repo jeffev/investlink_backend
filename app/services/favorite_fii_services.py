@@ -18,7 +18,10 @@ def handle_db_operations(func):
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error in {func.__name__}: {e}")
-            return jsonify({"message": "An error occurred, please try again later"}), 500
+            return (
+                jsonify({"message": "An error occurred, please try again later"}),
+                500,
+            )
 
     return wrapper
 

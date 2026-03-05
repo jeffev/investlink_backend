@@ -1,9 +1,13 @@
+import functools
+import logging
+
 from flask import jsonify
 from models.user_layout import UserLayout
 from config import db
 
 
 def handle_db_operations(func):
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             result = func(*args, **kwargs)
@@ -11,8 +15,8 @@ def handle_db_operations(func):
             return result
         except Exception as e:
             db.session.rollback()
-            print(f"Error in {func.__name__}: {e}")
-            return jsonify({"message": f"Error in {func.__name__}"}), 500
+            logging.error(f"Error in {func.__name__}: {e}")
+            return jsonify({"message": "An error occurred, please try again later"}), 500
 
     return wrapper
 
@@ -46,8 +50,7 @@ def save_user_layout(user_id, layout, estado):
 
 @handle_db_operations
 def delete_user_layout(layout_id):
-    """Delete a user layout by ID"""
-    user_layout = UserLayout.query.get(layout_id)
+    user_layout = db.session.get(UserLayout, layout_id)
     if user_layout is None:
         return jsonify({"message": "Layout not found"}), 404
 

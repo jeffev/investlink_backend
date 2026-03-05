@@ -47,6 +47,7 @@ from routes.favorite_fii_routes import (
     add_favorite_fii_json,
     remove_favorite_fii_json,
 )
+from routes.prediction_routes import list_predictions_json, view_prediction_json
 
 
 def protected_route(view_func, required_profile=None):
@@ -59,7 +60,7 @@ def protected_route(view_func, required_profile=None):
             return jsonify({"message": "Invalid token"}), 401
 
         # Recupera o usuário do banco de dados
-        user = User.query.get(current_user_id)
+        user = db.session.get(User, current_user_id)
         if user is None:
             return jsonify({"message": "User not found"}), 404
 
@@ -232,4 +233,16 @@ def setup_routes(app):
         "/v1/favorites/fii/<string:ticker>",
         methods=["DELETE"],
         view_func=protected_route(remove_favorite_fii_json),
+    )
+
+    # Prediction routes
+    app.add_url_rule(
+        "/v1/stocks/predictions",
+        methods=["GET"],
+        view_func=protected_route(list_predictions_json),
+    )
+    app.add_url_rule(
+        "/v1/stocks/<string:ticker>/prediction",
+        methods=["GET"],
+        view_func=protected_route(view_prediction_json),
     )

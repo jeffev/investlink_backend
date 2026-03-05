@@ -26,7 +26,7 @@ def list_users():
 
 def view_user(user_id):
     try:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if user is None:
             return jsonify({"message": "User not found"}), 404
         return jsonify(user.to_json()), 200
@@ -79,7 +79,7 @@ def new_user(user_data):
 
 def edit_user(user_id, user_data):
     try:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if user is None:
             return jsonify({"message": "User not found"}), 404
 
@@ -96,7 +96,7 @@ def edit_user(user_id, user_data):
 
 def delete_user(user_id):
     try:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if user is None:
             return jsonify({"message": "User not found"}), 404
 

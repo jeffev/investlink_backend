@@ -1,3 +1,6 @@
+import functools
+import logging
+
 from flask import jsonify
 from config import db
 from models.favorite_fiis import FavoriteFii
@@ -6,6 +9,7 @@ from models.fii import Fii
 
 
 def handle_db_operations(func):
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             result = func(*args, **kwargs)
@@ -13,8 +17,8 @@ def handle_db_operations(func):
             return result
         except Exception as e:
             db.session.rollback()
-            print(f"Error in {func.__name__}: {e}")
-            return jsonify({"message": f"Error in {func.__name__}"}), 500
+            logging.error(f"Error in {func.__name__}: {e}")
+            return jsonify({"message": "An error occurred, please try again later"}), 500
 
     return wrapper
 
@@ -28,7 +32,7 @@ def list_favorites_fii(user_id):
 
 @handle_db_operations
 def view_favorite_fii(favorite_id):
-    favorite = FavoriteFii.query.get(favorite_id)
+    favorite = db.session.get(FavoriteFii, favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
     return jsonify(favorite.to_json()), 200
@@ -39,10 +43,10 @@ def new_favorite_fii(favorite_data):
     user_id = favorite_data.get("user_id")
     fii_ticker = favorite_data.get("fii_ticker")
 
-    if not User.query.get(user_id):
+    if not db.session.get(User, user_id):
         return jsonify({"message": "User not found"}), 404
 
-    if not Fii.query.get(fii_ticker):
+    if not db.session.get(Fii, fii_ticker):
         return jsonify({"message": "FII not found"}), 404
 
     existing_favorite = FavoriteFii.query.filter_by(
@@ -61,13 +65,13 @@ def edit_favorite_fii(favorite_id, favorite_data):
     user_id = favorite_data.get("user_id")
     fii_ticker = favorite_data.get("fii_ticker")
 
-    if user_id is not None and not User.query.get(user_id):
+    if user_id is not None and not db.session.get(User, user_id):
         return jsonify({"message": "User not found"}), 404
 
-    if fii_ticker is not None and not Fii.query.get(fii_ticker):
+    if fii_ticker is not None and not db.session.get(Fii, fii_ticker):
         return jsonify({"message": "FII not found"}), 404
 
-    favorite = FavoriteFii.query.get(favorite_id)
+    favorite = db.session.get(FavoriteFii, favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
 
@@ -79,7 +83,7 @@ def edit_favorite_fii(favorite_id, favorite_data):
 
 @handle_db_operations
 def delete_favorite_fii(favorite_id):
-    favorite = FavoriteFii.query.get(favorite_id)
+    favorite = db.session.get(FavoriteFii, favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
 

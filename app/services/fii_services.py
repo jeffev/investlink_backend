@@ -41,7 +41,7 @@ def list_fiis(user_id, page=1, per_page=50):
 
 def view_fii(ticker):
     try:
-        fii = Fii.query.get(ticker)
+        fii = db.session.get(Fii, ticker)
         if fii is None:
             return jsonify({"message": "FII not found"}), 404
         return jsonify(fii.to_json()), 200
@@ -68,7 +68,7 @@ def new_fii(fii_data):
 
 def edit_fii(ticker, fii_data):
     try:
-        fii = Fii.query.get(ticker)
+        fii = db.session.get(Fii, ticker)
         if fii is None:
             return jsonify({"message": "FII not found"}), 404
 
@@ -85,7 +85,7 @@ def edit_fii(ticker, fii_data):
 
 def delete_fii(ticker):
     try:
-        fii = Fii.query.get(ticker)
+        fii = db.session.get(Fii, ticker)
         if fii is None:
             return jsonify({"message": "FII not found"}), 404
 
@@ -179,11 +179,9 @@ def update_all_fiis():
             for field in numeric_fields:
                 fii_data[field] = fii_data.get(field, 0.0)
 
+        cached_map = {item["ticker"]: item for item in cached_fiis}
         for fii in existing_fiis:
-            fii_data = next(
-                item for item in cached_fiis if item["ticker"] == fii.ticker
-            )
-            for key, value in fii_data.items():
+            for key, value in cached_map[fii.ticker].items():
                 setattr(fii, key, value)
 
         new_fiis = [

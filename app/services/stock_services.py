@@ -5,6 +5,7 @@ from flask import jsonify
 from models.stock import Stock
 from models.favorite import Favorite
 from config import db
+from services.prediction_service import get_latest_predictions_map, attach_ml_fields
 
 
 def list_stocks(user_id, page=1, per_page=50):
@@ -14,8 +15,12 @@ def list_stocks(user_id, page=1, per_page=50):
             fav.stock_ticker for fav in Favorite.query.filter_by(user_id=user_id).all()
         }
         paginated = Stock.query.paginate(page=page, per_page=per_page, error_out=False)
+        pred_map = get_latest_predictions_map()
         stocks_json = [
-            {**stock.to_json(), "favorita": stock.ticker in favorites}
+            attach_ml_fields(
+                {**stock.to_json(), "favorita": stock.ticker in favorites},
+                pred_map.get(stock.ticker),
+            )
             for stock in paginated.items
         ]
         return (
@@ -39,10 +44,11 @@ def list_stocks(user_id, page=1, per_page=50):
 
 def view_stock(ticker):
     try:
-        stock = Stock.query.get(ticker)
+        stock = db.session.get(Stock, ticker)
         if not stock:
             return jsonify({"message": "Stock not found"}), 404
-        return jsonify(stock.to_json()), 200
+        pred = get_latest_predictions_map().get(ticker)
+        return jsonify(attach_ml_fields(stock.to_json(), pred)), 200
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500
@@ -68,7 +74,7 @@ def new_stock(stock_data):
 
 def edit_stock(ticker, stock_data):
     try:
-        stock = Stock.query.get(ticker)
+        stock = db.session.get(Stock, ticker)
         if not stock:
             return jsonify({"message": "Stock not found"}), 404
 
@@ -88,7 +94,7 @@ def edit_stock(ticker, stock_data):
 
 def delete_stock(ticker):
     try:
-        stock = Stock.query.get(ticker)
+        stock = db.session.get(Stock, ticker)
         if not stock:
             return jsonify({"message": "Stock not found"}), 404
 

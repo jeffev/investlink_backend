@@ -7,14 +7,81 @@ from models.favorite import Favorite
 from config import db
 from services.prediction_service import get_latest_predictions_map, attach_ml_fields
 
+STOCK_ALLOWED_COLS = {
+    "ticker",
+    "companyname",
+    "sectorname",
+    "subsectorname",
+    "segmentname",
+    "price",
+    "p_l",
+    "dy",
+    "p_vp",
+    "p_ebit",
+    "p_ativo",
+    "ev_ebit",
+    "margembruta",
+    "margemebit",
+    "margemliquida",
+    "p_capitalgiro",
+    "p_ativocirculante",
+    "giroativos",
+    "roe",
+    "roa",
+    "roic",
+    "dividaliquidapatrimonioliquido",
+    "dividaliquidaebit",
+    "pl_ativo",
+    "passivo_ativo",
+    "liquidezcorrente",
+    "peg_ratio",
+    "receitas_cagr5",
+    "vpa",
+    "lpa",
+    "valormercado",
+    "graham_formula",
+    "discount_to_graham",
+    "roic_rank",
+    "ey_rank",
+    "magic_formula_rank",
+}
 
-def list_stocks(user_id, page=1, per_page=50):
+
+def _apply_filters_and_sort(query, model, allowed_cols, sort_by, sort_dir, filters):
+    if filters:
+        for f in filters:
+            col_id = f.get("id")
+            value = f.get("value")
+            if col_id not in allowed_cols or value is None:
+                continue
+            col = getattr(model, col_id)
+            if isinstance(value, list):
+                min_val, max_val = value[0], value[1]
+                if min_val not in (None, ""):
+                    query = query.filter(col >= float(min_val))
+                if max_val not in (None, ""):
+                    query = query.filter(col <= float(max_val))
+            elif value != "":
+                query = query.filter(col.ilike(f"%{value}%"))
+    if sort_by and sort_by in allowed_cols:
+        col = getattr(model, sort_by)
+        query = query.order_by(col.desc() if sort_dir == "desc" else col.asc())
+    return query
+
+
+def list_stocks(
+    user_id, page=1, per_page=50, sort_by=None, sort_dir="asc", filters=None
+):
     try:
         per_page = min(per_page, 500)
         favorites = {
             fav.stock_ticker for fav in Favorite.query.filter_by(user_id=user_id).all()
         }
-        paginated = Stock.query.paginate(page=page, per_page=per_page, error_out=False)
+        query = Stock.query
+        query = _apply_filters_and_sort(
+            query, Stock, STOCK_ALLOWED_COLS, sort_by, sort_dir, filters
+        )
+        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
         pred_map = get_latest_predictions_map()
         stocks_json = [
             attach_ml_fields(
@@ -198,7 +265,8 @@ def update_all_stocks():
         tickers = {stock["ticker"] for stock in cached_stocks}
 
         existing_stocks = Stock.query.filter(Stock.ticker.in_(tickers)).all()
-        existing_tickers = {stock.ticker for stock in existing_stocks}
+        existing_map = {stock.ticker: stock for stock in existing_stocks}
+        existing_tickers = set(existing_map.keys())
 
         numeric_fields = [
             "price",
@@ -258,11 +326,7 @@ def update_all_stocks():
             )
 
             if stock_data["ticker"] in existing_tickers:
-                stock = next(
-                    stock
-                    for stock in existing_stocks
-                    if stock.ticker == stock_data["ticker"]
-                )
+                stock = existing_map[stock_data["ticker"]]
                 for key, value in stock_data.items():
                     setattr(stock, key, value)
                 stock.graham_formula = stock.get_graham_formula()

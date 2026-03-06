@@ -1,5 +1,6 @@
 import bcrypt
 import logging
+import os
 
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_cors import CORS
@@ -30,7 +31,8 @@ def seed_admin():
     existing = User.query.filter_by(user_name="admin").first()
     if existing:
         return
-    hashed = bcrypt.hashpw(b"admin", bcrypt.gensalt()).decode("utf-8")
+    password = os.environ.get("ADMIN_PASSWORD", "admin").encode("utf-8")
+    hashed = bcrypt.hashpw(password, bcrypt.gensalt()).decode("utf-8")
     admin = User(
         user_name="admin",
         name="Administrador",

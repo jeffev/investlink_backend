@@ -7,19 +7,64 @@ from models.fii import Fii
 from models.favorite_fiis import FavoriteFii
 from config import db
 
+FII_ALLOWED_COLS = {
+    "ticker",
+    "companyname",
+    "sectorname",
+    "subsectorname",
+    "segment",
+    "price",
+    "dy",
+    "p_vp",
+    "valorpatrimonialcota",
+    "liquidezmediadiaria",
+    "percentualcaixa",
+    "dividend_cagr",
+    "cota_cagr",
+    "numerocotistas",
+    "numerocotas",
+    "patrimonio",
+    "lastdividend",
+}
 
-def list_fiis(user_id, page=1, per_page=50):
+
+def _apply_filters_and_sort(query, model, allowed_cols, sort_by, sort_dir, filters):
+    if filters:
+        for f in filters:
+            col_id = f.get("id")
+            value = f.get("value")
+            if col_id not in allowed_cols or value is None:
+                continue
+            col = getattr(model, col_id)
+            if isinstance(value, list):
+                min_val, max_val = value[0], value[1]
+                if min_val not in (None, ""):
+                    query = query.filter(col >= float(min_val))
+                if max_val not in (None, ""):
+                    query = query.filter(col <= float(max_val))
+            elif value != "":
+                query = query.filter(col.ilike(f"%{value}%"))
+    if sort_by and sort_by in allowed_cols:
+        col = getattr(model, sort_by)
+        query = query.order_by(col.desc() if sort_dir == "desc" else col.asc())
+    return query
+
+
+def list_fiis(user_id, page=1, per_page=50, sort_by=None, sort_dir="asc", filters=None):
     try:
         per_page = min(per_page, 500)
         favorites = {
             fav.fii_ticker for fav in FavoriteFii.query.filter_by(user_id=user_id).all()
         }
-        paginated = Fii.query.paginate(page=page, per_page=per_page, error_out=False)
+        query = Fii.query
+        query = _apply_filters_and_sort(
+            query, Fii, FII_ALLOWED_COLS, sort_by, sort_dir, filters
+        )
+        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
         fiis_json = [
             {**fii.to_json(), "favorita": fii.ticker in favorites}
             for fii in paginated.items
         ]
-        fiis_json.sort(key=lambda x: x["favorita"], reverse=True)
         return (
             jsonify(
                 {

@@ -1,3 +1,4 @@
+import json
 from flask import request
 from flask_jwt_extended import get_jwt_identity
 
@@ -15,7 +16,11 @@ def list_fiis_json():
     user_id = get_jwt_identity()
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
-    return list_fiis(user_id, page, per_page)
+    sort_by = request.args.get("sort_by", None)
+    sort_dir = request.args.get("sort_dir", "asc")
+    filters_raw = request.args.get("filters", None)
+    filters = json.loads(filters_raw) if filters_raw else None
+    return list_fiis(user_id, page, per_page, sort_by, sort_dir, filters)
 
 
 def view_fii_json(ticker):

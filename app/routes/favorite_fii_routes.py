@@ -13,11 +13,14 @@ from services.favorite_fii_services import (
 
 def list_favorites_fii_json():
     user_id = get_jwt_identity()
-    return list_favorites_fii(user_id)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+    return list_favorites_fii(user_id, page=page, per_page=per_page)
 
 
 def view_favorite_fii_json(favorite_id):
-    return view_favorite_fii(favorite_id)
+    current_user_id = get_jwt_identity()
+    return view_favorite_fii(favorite_id, current_user_id)
 
 
 def new_favorite_fii_json():
@@ -26,12 +29,14 @@ def new_favorite_fii_json():
 
 
 def edit_favorite_fii_json(favorite_id):
+    current_user_id = get_jwt_identity()
     favorite_data = request.get_json()
-    return edit_favorite_fii(favorite_id, favorite_data)
+    return edit_favorite_fii(favorite_id, favorite_data, current_user_id)
 
 
 def delete_favorite_fii_json(favorite_id):
-    return delete_favorite_fii(favorite_id)
+    current_user_id = get_jwt_identity()
+    return delete_favorite_fii(favorite_id, current_user_id)
 
 
 def add_favorite_fii_json(ticker):

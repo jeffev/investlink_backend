@@ -29,7 +29,7 @@ def get_user_layout(user_id, layout=None):
     if layout:
         user_layout = UserLayout.query.filter_by(user_id=user_id, layout=layout).first()
         if user_layout is None:
-            return jsonify(None), 400
+            return jsonify({"message": "Layout not found"}), 404
         return jsonify(user_layout.estado), 200
     else:
         user_layouts = UserLayout.query.filter_by(user_id=user_id).all()

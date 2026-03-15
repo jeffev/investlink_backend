@@ -257,7 +257,7 @@ class TestUserServices:
                 assert "Error adding user" in result_data["message"]
 
     def test_edit_user_success(self, app):
-        """Test editing an existing user"""
+        """Test editing an existing user as admin"""
         with app.app_context():
             user_data = {
                 "name": "Updated User",
@@ -274,7 +274,7 @@ class TestUserServices:
 
                 mock_db_session.get.return_value = mock_user
 
-                result, status_code = edit_user(1, user_data)
+                result, status_code = edit_user(1, user_data, 1, "ADMIN")
 
                 assert status_code == 200
                 result_data = result.get_json()
@@ -284,6 +284,46 @@ class TestUserServices:
                 for key, value in user_data.items():
                     assert getattr(mock_user, key) == value
 
+    def test_edit_user_non_editable_field(self, app):
+        """Test that non-admin cannot edit restricted fields"""
+        with app.app_context():
+            user_data = {"profile": "ADMIN"}
+
+            mock_user = MagicMock(spec=User)
+
+            with (
+                patch("services.user_services.User.query"),
+                patch("services.user_services.db.session") as mock_db_session,
+            ):
+
+                mock_db_session.get.return_value = mock_user
+
+                result, status_code = edit_user(1, user_data, 1, "USER")
+
+                assert status_code == 400
+                result_data = result.get_json()
+                assert "is not editable" in result_data["message"]
+
+    def test_edit_user_unauthorized(self, app):
+        """Test that a non-admin cannot edit another user"""
+        with app.app_context():
+            user_data = {"name": "Hacker"}
+
+            mock_user = MagicMock(spec=User)
+
+            with (
+                patch("services.user_services.User.query"),
+                patch("services.user_services.db.session") as mock_db_session,
+            ):
+
+                mock_db_session.get.return_value = mock_user
+
+                result, status_code = edit_user(2, user_data, 1, "USER")
+
+                assert status_code == 403
+                result_data = result.get_json()
+                assert result_data["message"] == "Unauthorized"
+
     def test_edit_user_not_found(self, app):
         """Test editing a user that doesn't exist"""
         with app.app_context():
@@ -292,7 +332,7 @@ class TestUserServices:
             with patch("services.user_services.db.session") as mock_db_session:
                 mock_db_session.get.return_value = None
 
-                result, status_code = edit_user(999, user_data)
+                result, status_code = edit_user(999, user_data, 999, "USER")
 
                 assert status_code == 404
                 result_data = result.get_json()
@@ -303,16 +343,18 @@ class TestUserServices:
         with app.app_context():
             user_data = {"name": "Updated User"}
 
+            mock_user = MagicMock(spec=User)
+
             with (
                 patch("services.user_services.User.query"),
                 patch("services.user_services.db.session") as mock_db_session,
             ):
 
-                mock_db_session.get.return_value = MagicMock()
+                mock_db_session.get.return_value = mock_user
                 mock_db_session.commit.side_effect = Exception("Database error")
                 mock_db_session.rollback = MagicMock()
 
-                result, status_code = edit_user(1, user_data)
+                result, status_code = edit_user(1, user_data, 1, "USER")
 
                 assert status_code == 500
                 result_data = result.get_json()

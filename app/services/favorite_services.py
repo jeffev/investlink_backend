@@ -32,8 +32,10 @@ def handle_db_errors(func):
 
 
 @handle_db_errors
-def list_favorites(user_id):
-    user_favorites = Favorite.query.filter_by(user_id=user_id).all()
+def list_favorites(user_id, page=1, per_page=50):
+    query = Favorite.query.filter_by(user_id=user_id)
+    total = query.count()
+    user_favorites = query.offset((page - 1) * per_page).limit(per_page).all()
     pred_map = get_latest_predictions_map()
     favorites_json = []
     for favorite in user_favorites:
@@ -44,7 +46,20 @@ def list_favorites(user_id):
                 fav_dict["stock"], pred_map.get(ticker)
             )
         favorites_json.append(fav_dict)
-    return jsonify(favorites_json), 200
+    return (
+        jsonify(
+            {
+                "data": favorites_json,
+                "pagination": {
+                    "total": total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": (total + per_page - 1) // per_page,
+                },
+            }
+        ),
+        200,
+    )
 
 
 @handle_db_errors
@@ -84,10 +99,12 @@ def get_price_alerts(user_id):
 
 
 @handle_db_errors
-def view_favorite(favorite_id):
+def view_favorite(favorite_id, current_user_id):
     favorite = db.session.get(Favorite, favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
+    if favorite.user_id != current_user_id:
+        return jsonify({"message": "Unauthorized"}), 403
     return jsonify(favorite.to_json()), 200
 
 
@@ -114,7 +131,7 @@ def new_favorite(favorite_data):
 
 
 @handle_db_errors
-def edit_favorite(favorite_id, favorite_data):
+def edit_favorite(favorite_id, favorite_data, current_user_id):
     user_id = favorite_data.get("user_id")
     stock_ticker = favorite_data.get("stock_ticker")
 
@@ -128,6 +145,9 @@ def edit_favorite(favorite_id, favorite_data):
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
 
+    if favorite.user_id != current_user_id:
+        return jsonify({"message": "Unauthorized"}), 403
+
     for key, value in favorite_data.items():
         setattr(favorite, key, value)
 
@@ -136,10 +156,13 @@ def edit_favorite(favorite_id, favorite_data):
 
 
 @handle_db_errors
-def delete_favorite(favorite_id):
+def delete_favorite(favorite_id, current_user_id):
     favorite = db.session.get(Favorite, favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
+
+    if favorite.user_id != current_user_id:
+        return jsonify({"message": "Unauthorized"}), 403
 
     db.session.delete(favorite)
     db.session.commit()

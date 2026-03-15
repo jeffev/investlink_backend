@@ -45,9 +45,9 @@ class TestUserLayoutService:
 
                 result, status_code = get_user_layout(1, "NonExistent")
 
-                assert status_code == 400
+                assert status_code == 404
                 result_data = result.get_json()
-                assert result_data is None
+                assert result_data["message"] == "Layout not found"
 
     def test_get_user_layout_without_layout_success(
         self, app, sample_layout, sample_user

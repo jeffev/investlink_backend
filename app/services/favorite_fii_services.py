@@ -27,17 +27,34 @@ def handle_db_operations(func):
 
 
 @handle_db_operations
-def list_favorites_fii(user_id):
-    user_favorites = FavoriteFii.query.filter_by(user_id=user_id).all()
+def list_favorites_fii(user_id, page=1, per_page=50):
+    query = FavoriteFii.query.filter_by(user_id=user_id)
+    total = query.count()
+    user_favorites = query.offset((page - 1) * per_page).limit(per_page).all()
     favorites_json = [favorite.to_json() for favorite in user_favorites]
-    return jsonify(favorites_json), 200
+    return (
+        jsonify(
+            {
+                "data": favorites_json,
+                "pagination": {
+                    "total": total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": (total + per_page - 1) // per_page,
+                },
+            }
+        ),
+        200,
+    )
 
 
 @handle_db_operations
-def view_favorite_fii(favorite_id):
+def view_favorite_fii(favorite_id, current_user_id):
     favorite = db.session.get(FavoriteFii, favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
+    if favorite.user_id != current_user_id:
+        return jsonify({"message": "Unauthorized"}), 403
     return jsonify(favorite.to_json()), 200
 
 
@@ -64,7 +81,7 @@ def new_favorite_fii(favorite_data):
 
 
 @handle_db_operations
-def edit_favorite_fii(favorite_id, favorite_data):
+def edit_favorite_fii(favorite_id, favorite_data, current_user_id):
     user_id = favorite_data.get("user_id")
     fii_ticker = favorite_data.get("fii_ticker")
 
@@ -78,6 +95,9 @@ def edit_favorite_fii(favorite_id, favorite_data):
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
 
+    if favorite.user_id != current_user_id:
+        return jsonify({"message": "Unauthorized"}), 403
+
     for key, value in favorite_data.items():
         setattr(favorite, key, value)
 
@@ -85,10 +105,13 @@ def edit_favorite_fii(favorite_id, favorite_data):
 
 
 @handle_db_operations
-def delete_favorite_fii(favorite_id):
+def delete_favorite_fii(favorite_id, current_user_id):
     favorite = db.session.get(FavoriteFii, favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
+
+    if favorite.user_id != current_user_id:
+        return jsonify({"message": "Unauthorized"}), 403
 
     db.session.delete(favorite)
     return jsonify({"message": "Favorite deleted successfully"}), 200

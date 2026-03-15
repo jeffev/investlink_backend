@@ -83,13 +83,27 @@ def new_user(user_data):
         return jsonify({"message": "Error adding user"}), 500
 
 
-def edit_user(user_id, user_data):
+EDITABLE_FIELDS_USER = {"user_name", "name", "email"}
+EDITABLE_FIELDS_ADMIN = {"user_name", "name", "email", "profile"}
+
+
+def edit_user(user_id, user_data, requesting_user_id, requesting_user_profile):
     try:
         user = db.session.get(User, user_id)
         if user is None:
             return jsonify({"message": "User not found"}), 404
 
+        if requesting_user_profile != "ADMIN" and requesting_user_id != user_id:
+            return jsonify({"message": "Unauthorized"}), 403
+
+        allowed_fields = (
+            EDITABLE_FIELDS_ADMIN
+            if requesting_user_profile == "ADMIN"
+            else EDITABLE_FIELDS_USER
+        )
         for key, value in user_data.items():
+            if key not in allowed_fields:
+                return jsonify({"message": f"Field '{key}' is not editable"}), 400
             setattr(user, key, value)
 
         db.session.commit()

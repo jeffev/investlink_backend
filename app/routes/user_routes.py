@@ -1,5 +1,8 @@
 from flask import request
+from flask_jwt_extended import get_jwt_identity
 
+from config import db
+from models.user import User
 from services.user_services import (
     list_users,
     view_user,
@@ -26,7 +29,10 @@ def new_user_json():
 
 def edit_user_json(user_id):
     user_data = request.get_json()
-    return edit_user(user_id, user_data)
+    current_user_id = get_jwt_identity()
+    current_user = db.session.get(User, current_user_id)
+    current_profile = current_user.profile if current_user else "USER"
+    return edit_user(user_id, user_data, current_user_id, current_profile)
 
 
 def delete_user_json(user_id):

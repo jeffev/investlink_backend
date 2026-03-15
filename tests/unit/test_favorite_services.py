@@ -34,7 +34,9 @@ class TestFavoriteServices:
                     "services.favorite_services.get_latest_predictions_map"
                 ) as mock_pred_map,
             ):
-                mock_favorite_query.filter_by.return_value.all.return_value = [
+                mock_paged = mock_favorite_query.filter_by.return_value
+                mock_paged.count.return_value = 1
+                mock_paged.offset.return_value.limit.return_value.all.return_value = [
                     mock_favorite
                 ]
                 mock_pred_map.return_value = {}
@@ -43,8 +45,9 @@ class TestFavoriteServices:
 
                 assert status_code == 200
                 result_data = result.get_json()
-                assert len(result_data) == 1
-                assert result_data[0]["stock_ticker"] == "PETR4"
+                assert len(result_data["data"]) == 1
+                assert result_data["data"][0]["stock_ticker"] == "PETR4"
+                assert result_data["pagination"]["total"] == 1
 
     def test_list_favorites_empty(self, app):
         """Test listing favorites when no favorites exist"""
@@ -57,14 +60,17 @@ class TestFavoriteServices:
                     "services.favorite_services.get_latest_predictions_map"
                 ) as mock_pred_map,
             ):
-                mock_favorite_query.filter_by.return_value.all.return_value = []
+                mock_paged = mock_favorite_query.filter_by.return_value
+                mock_paged.count.return_value = 0
+                mock_paged.offset.return_value.limit.return_value.all.return_value = []
                 mock_pred_map.return_value = {}
 
                 result, status_code = list_favorites(1)
 
                 assert status_code == 200
                 result_data = result.get_json()
-                assert result_data == []
+                assert result_data["data"] == []
+                assert result_data["pagination"]["total"] == 0
 
     def test_list_favorites_with_exception(self, app):
         """Test listing favorites when an exception occurs"""
@@ -87,6 +93,7 @@ class TestFavoriteServices:
         """Test viewing a specific favorite"""
         with app.app_context():
             mock_favorite = MagicMock(spec=Favorite)
+            mock_favorite.user_id = 1
             mock_favorite.to_json.return_value = {
                 "id": 1,
                 "user_id": 1,
@@ -98,11 +105,26 @@ class TestFavoriteServices:
             with patch("services.favorite_services.db.session") as mock_db_session:
                 mock_db_session.get.return_value = mock_favorite
 
-                result, status_code = view_favorite(1)
+                result, status_code = view_favorite(1, 1)
 
                 assert status_code == 200
                 result_data = result.get_json()
                 assert result_data["stock_ticker"] == "PETR4"
+
+    def test_view_favorite_unauthorized(self, app):
+        """Test viewing a favorite that belongs to another user"""
+        with app.app_context():
+            mock_favorite = MagicMock(spec=Favorite)
+            mock_favorite.user_id = 2
+
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_favorite
+
+                result, status_code = view_favorite(1, 1)
+
+                assert status_code == 403
+                result_data = result.get_json()
+                assert result_data["message"] == "Unauthorized"
 
     def test_view_favorite_not_found(self, app):
         """Test viewing a favorite that doesn't exist"""
@@ -110,7 +132,7 @@ class TestFavoriteServices:
             with patch("services.favorite_services.db.session") as mock_db_session:
                 mock_db_session.get.return_value = None
 
-                result, status_code = view_favorite(999)
+                result, status_code = view_favorite(999, 1)
 
                 assert status_code == 404
                 result_data = result.get_json()
@@ -122,7 +144,7 @@ class TestFavoriteServices:
             with patch("services.favorite_services.db.session") as mock_db_session:
                 mock_db_session.get.side_effect = Exception("Database error")
 
-                result, status_code = view_favorite(1)
+                result, status_code = view_favorite(1, 1)
 
                 assert status_code == 500
                 result_data = result.get_json()
@@ -262,11 +284,12 @@ class TestFavoriteServices:
             favorite_data = {"ceiling_price": 35.0, "target_price": 28.0}
 
             mock_favorite = MagicMock(spec=Favorite)
+            mock_favorite.user_id = 1
 
             with patch("services.favorite_services.db.session") as mock_db_session:
                 mock_db_session.get.return_value = mock_favorite
 
-                result, status_code = edit_favorite(1, favorite_data)
+                result, status_code = edit_favorite(1, favorite_data, 1)
 
                 assert status_code == 200
                 result_data = result.get_json()
@@ -276,6 +299,23 @@ class TestFavoriteServices:
                 for key, value in favorite_data.items():
                     assert getattr(mock_favorite, key) == value
 
+    def test_edit_favorite_unauthorized(self, app):
+        """Test editing a favorite that belongs to another user"""
+        with app.app_context():
+            favorite_data = {"ceiling_price": 35.0}
+
+            mock_favorite = MagicMock(spec=Favorite)
+            mock_favorite.user_id = 2
+
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_favorite
+
+                result, status_code = edit_favorite(1, favorite_data, 1)
+
+                assert status_code == 403
+                result_data = result.get_json()
+                assert result_data["message"] == "Unauthorized"
+
     def test_edit_favorite_not_found(self, app):
         """Test editing a favorite that doesn't exist"""
         with app.app_context():
@@ -284,7 +324,7 @@ class TestFavoriteServices:
             with patch("services.favorite_services.db.session") as mock_db_session:
                 mock_db_session.get.return_value = None
 
-                result, status_code = edit_favorite(999, favorite_data)
+                result, status_code = edit_favorite(999, favorite_data, 1)
 
                 assert status_code == 404
                 result_data = result.get_json()
@@ -295,11 +335,14 @@ class TestFavoriteServices:
         with app.app_context():
             favorite_data = {"ceiling_price": 35.0}
 
+            mock_favorite = MagicMock(spec=Favorite)
+            mock_favorite.user_id = 1
+
             with patch("services.favorite_services.db.session") as mock_db_session:
-                mock_db_session.get.return_value = MagicMock()
+                mock_db_session.get.return_value = mock_favorite
                 mock_db_session.commit.side_effect = Exception("Database error")
 
-                result, status_code = edit_favorite(1, favorite_data)
+                result, status_code = edit_favorite(1, favorite_data, 1)
 
                 assert status_code == 500
                 result_data = result.get_json()
@@ -312,15 +355,31 @@ class TestFavoriteServices:
         """Test deleting an existing favorite"""
         with app.app_context():
             mock_favorite = MagicMock(spec=Favorite)
+            mock_favorite.user_id = 1
 
             with patch("services.favorite_services.db.session") as mock_db_session:
                 mock_db_session.get.return_value = mock_favorite
 
-                result, status_code = delete_favorite(1)
+                result, status_code = delete_favorite(1, 1)
 
                 assert status_code == 200
                 result_data = result.get_json()
                 assert result_data["message"] == "Favorite deleted successfully"
+
+    def test_delete_favorite_unauthorized(self, app):
+        """Test deleting a favorite that belongs to another user"""
+        with app.app_context():
+            mock_favorite = MagicMock(spec=Favorite)
+            mock_favorite.user_id = 2
+
+            with patch("services.favorite_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_favorite
+
+                result, status_code = delete_favorite(1, 1)
+
+                assert status_code == 403
+                result_data = result.get_json()
+                assert result_data["message"] == "Unauthorized"
 
     def test_delete_favorite_not_found(self, app):
         """Test deleting a favorite that doesn't exist"""
@@ -328,7 +387,7 @@ class TestFavoriteServices:
             with patch("services.favorite_services.db.session") as mock_db_session:
                 mock_db_session.get.return_value = None
 
-                result, status_code = delete_favorite(999)
+                result, status_code = delete_favorite(999, 1)
 
                 assert status_code == 404
                 result_data = result.get_json()
@@ -337,11 +396,14 @@ class TestFavoriteServices:
     def test_delete_favorite_with_exception(self, app):
         """Test deleting a favorite when an exception occurs"""
         with app.app_context():
+            mock_favorite = MagicMock(spec=Favorite)
+            mock_favorite.user_id = 1
+
             with patch("services.favorite_services.db.session") as mock_db_session:
-                mock_db_session.get.return_value = MagicMock()
+                mock_db_session.get.return_value = mock_favorite
                 mock_db_session.delete.side_effect = Exception("Database error")
 
-                result, status_code = delete_favorite(1)
+                result, status_code = delete_favorite(1, 1)
 
                 assert status_code == 500
                 result_data = result.get_json()

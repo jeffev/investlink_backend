@@ -41,4 +41,4 @@ jobs:
 
       - name: Run tests
         run: |
-          PYTHONPATH=app pytest --cov=app --cov-omit="app/app.py,app/utils.py,app/schemas/*" --cov-fail-under=80 -q
+          PYTHONPATH=app pytest --cov=app -q

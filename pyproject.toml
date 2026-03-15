@@ -19,6 +19,16 @@ extend-exclude = '''
 )/
 '''
 
+[tool.coverage.run]
+omit = [
+    "app/app.py",
+    "app/utils.py",
+    "app/schemas/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+
 [tool.flake8]
 max-line-length = 88
 extend-ignore = ["E203", "E266", "E501", "E731"]

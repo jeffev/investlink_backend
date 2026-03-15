@@ -59,3 +59,13 @@ def delete_user_layout(layout_id):
 
     db.session.delete(user_layout)
     return jsonify({"message": "Layout deleted successfully"}), 200
+
+
+@handle_db_operations
+def delete_user_layout_by_name(user_id, layout):
+    user_layout = UserLayout.query.filter_by(user_id=user_id, layout=layout).first()
+    if user_layout is None:
+        return jsonify({"message": "Layout not found"}), 404
+
+    db.session.delete(user_layout)
+    return jsonify({"message": "Layout deleted successfully"}), 200

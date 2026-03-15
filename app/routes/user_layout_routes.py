@@ -1,7 +1,11 @@
 from flask import request
 from flask_jwt_extended import get_jwt_identity
 
-from services.user_layout_service import get_user_layout, save_user_layout
+from services.user_layout_service import (
+    get_user_layout,
+    save_user_layout,
+    delete_user_layout_by_name,
+)
 
 
 def get_user_layout_json(layout):
@@ -17,3 +21,8 @@ def save_user_layout_json():
     estado = layout_data.get("estado")
 
     return save_user_layout(user_id, layout, estado)
+
+
+def delete_user_layout_json(layout):
+    user_id = get_jwt_identity()
+    return delete_user_layout_by_name(user_id, layout)

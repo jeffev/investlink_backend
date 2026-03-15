@@ -123,11 +123,15 @@ class TestUserServices:
                 patch(
                     "services.user_services.create_access_token"
                 ) as mock_create_token,
+                patch(
+                    "services.user_services.create_refresh_token"
+                ) as mock_create_refresh,
             ):
 
                 mock_user_query.filter_by.return_value.first.return_value = None
                 mock_hashpw.return_value.decode.return_value = "hashed_password"
                 mock_create_token.return_value = "access_token_123"
+                mock_create_refresh.return_value = "refresh_token_123"
                 mock_db_session.add = MagicMock()
                 mock_db_session.commit = MagicMock()
 
@@ -137,6 +141,7 @@ class TestUserServices:
                 result_data = result.get_json()
                 assert result_data["user_name"] == "newuser"
                 assert result_data["access_token"] == "access_token_123"
+                assert result_data["refresh_token"] == "refresh_token_123"
 
     def test_new_user_missing_username(self, app):
         """Test creating a user without username"""
@@ -379,11 +384,15 @@ class TestUserServices:
                 patch(
                     "services.user_services.create_access_token"
                 ) as mock_create_token,
+                patch(
+                    "services.user_services.create_refresh_token"
+                ) as mock_create_refresh,
             ):
 
                 mock_user_query.filter_by.return_value.first.return_value = mock_user
                 mock_checkpw.return_value = True
                 mock_create_token.return_value = "access_token_123"
+                mock_create_refresh.return_value = "refresh_token_123"
 
                 result, status_code = login_user(login_data)
 
@@ -391,6 +400,7 @@ class TestUserServices:
                 result_data = result.get_json()
                 assert result_data["user_name"] == "testuser"
                 assert result_data["access_token"] == "access_token_123"
+                assert result_data["refresh_token"] == "refresh_token_123"
 
     def test_login_user_missing_username(self, app):
         """Test login without username"""

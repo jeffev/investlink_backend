@@ -7,6 +7,7 @@ from services.user_services import (
     edit_user,
     delete_user,
     login_user,
+    change_password,
 )
 
 
@@ -35,3 +36,8 @@ def delete_user_json(user_id):
 def login_user_json():
     login_data = request.get_json()
     return login_user(login_data)
+
+
+def change_password_json(user_id):
+    data = request.get_json()
+    return change_password(user_id, data)

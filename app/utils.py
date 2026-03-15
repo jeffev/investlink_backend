@@ -20,6 +20,7 @@ from routes.user_routes import (
     edit_user_json,
     delete_user_json,
     login_user_json,
+    change_password_json,
 )
 from routes.favorite_routes import (
     list_favorites_json,
@@ -31,7 +32,11 @@ from routes.favorite_routes import (
     remove_favorite_stock,
     list_price_alerts_json,
 )
-from routes.user_layout_routes import get_user_layout_json, save_user_layout_json
+from routes.user_layout_routes import (
+    get_user_layout_json,
+    save_user_layout_json,
+    delete_user_layout_json,
+)
 from routes.fii_routes import (
     list_fiis_json,
     view_fii_json,
@@ -49,6 +54,7 @@ from routes.favorite_fii_routes import (
     add_favorite_fii_json,
     remove_favorite_fii_json,
 )
+from routes.auth_routes import refresh_token_json
 from routes.prediction_routes import list_predictions_json, view_prediction_json
 from routes.portfolio_routes import (
     add_position_json,
@@ -89,6 +95,9 @@ def protected_route(view_func, required_profile=None):
 
 
 def setup_routes(app):
+    # Auth routes
+    app.add_url_rule("/v1/auth/refresh", methods=["POST"], view_func=refresh_token_json)
+
     # Stock routes
     app.add_url_rule(
         "/v1/stocks", methods=["GET"], view_func=protected_route(list_stocks_json)
@@ -138,6 +147,11 @@ def setup_routes(app):
         view_func=protected_route(delete_user_json),
     )
     app.add_url_rule("/v1/user/login", methods=["POST"], view_func=login_user_json)
+    app.add_url_rule(
+        "/v1/user/<int:user_id>/password",
+        methods=["PUT"],
+        view_func=protected_route(change_password_json),
+    )
 
     # Favorite routes
     app.add_url_rule(
@@ -187,6 +201,11 @@ def setup_routes(app):
         "/v1/user_layout",
         methods=["POST"],
         view_func=protected_route(save_user_layout_json),
+    )
+    app.add_url_rule(
+        "/v1/user_layout/<string:layout>",
+        methods=["DELETE"],
+        view_func=protected_route(delete_user_layout_json),
     )
 
     # FII routes

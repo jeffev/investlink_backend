@@ -3,7 +3,7 @@ import logging
 import re
 from datetime import timedelta
 from flask import jsonify
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, create_refresh_token
 
 from models.user import User
 from config import db
@@ -50,6 +50,10 @@ def new_user(user_data):
         if existing_user:
             return jsonify({"message": "User already exists"}), 400
 
+        existing_email = User.query.filter_by(email=user_data["email"]).first()
+        if existing_email:
+            return jsonify({"message": "Email already in use"}), 400
+
         password = user_data.pop("password")
         hashed_password = bcrypt.hashpw(
             password.encode("utf-8"), bcrypt.gensalt()
@@ -62,12 +66,14 @@ def new_user(user_data):
         db.session.commit()
 
         access_token = create_access_token(identity=new_user.id, expires_delta=expires)
+        refresh_token = create_refresh_token(identity=new_user.id)
 
         response_data = {
             "profile": new_user.profile,
             "name": new_user.name,
             "user_name": new_user.user_name,
             "access_token": access_token,
+            "refresh_token": refresh_token,
         }
 
         return jsonify(response_data), 201
@@ -125,12 +131,14 @@ def login_user(login_data):
             login_data["password"].encode("utf-8"), user.password.encode("utf-8")
         ):
             access_token = create_access_token(identity=user.id, expires_delta=expires)
+            refresh_token = create_refresh_token(identity=user.id)
 
             response_data = {
                 "profile": user.profile,
                 "name": user.name,
                 "user_name": user.user_name,
                 "access_token": access_token,
+                "refresh_token": refresh_token,
             }
             return jsonify(response_data), 200
         else:
@@ -138,6 +146,34 @@ def login_user(login_data):
     except Exception as e:
         logger.error(f"Error logging in user: {e}")
         return jsonify({"message": "Error logging in user"}), 500
+
+
+def change_password(user_id, data):
+    try:
+        if not data.get("current_password") or not data.get("new_password"):
+            return (
+                jsonify({"message": "current_password and new_password are required"}),
+                400,
+            )
+
+        user = db.session.get(User, user_id)
+        if user is None:
+            return jsonify({"message": "User not found"}), 404
+
+        if not bcrypt.checkpw(
+            data["current_password"].encode("utf-8"), user.password.encode("utf-8")
+        ):
+            return jsonify({"message": "Current password is incorrect"}), 400
+
+        user.password = bcrypt.hashpw(
+            data["new_password"].encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+        db.session.commit()
+        return jsonify({"message": "Password changed successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error changing password: {e}")
+        return jsonify({"message": "Error changing password"}), 500
 
 
 def validate_email(email):

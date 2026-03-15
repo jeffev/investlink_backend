@@ -2,214 +2,159 @@
   "swagger": "2.0",
   "info": {
     "title": "InvestLink API",
-    "version": "1.0",
-    "description": "API for managing stocks and users in InvestLink"
+    "description": "API para análise de investimentos brasileiros (ações e FIIs)",
+    "version": "1.0.0"
   },
-  "tags": [
-    {
-      "name": "Stocks",
-      "description": "Endpoints for managing stocks"
-    },
-    {
-      "name": "Users",
-      "description": "Endpoints for managing users"
-    }
-  ],
+  "host": "localhost:5000",
+  "basePath": "/v1",
+  "schemes": ["http"],
   "securityDefinitions": {
-    "JWTAuth": {
+    "Bearer": {
       "type": "apiKey",
       "name": "Authorization",
       "in": "header",
-      "description": "Bearer token for authentication. Please type in 'Bearer' followed by a space and then the token."
-
+      "description": "JWT token no formato: Bearer {token}"
     }
   },
-  "security": [
-    {
-      "JWTAuth": []
-    }
+  "security": [{"Bearer": []}],
+  "tags": [
+    {"name": "Stocks", "description": "Ações da bolsa"},
+    {"name": "FIIs", "description": "Fundos de Investimento Imobiliário"},
+    {"name": "Users", "description": "Usuários e autenticação"},
+    {"name": "Favorites", "description": "Ações favoritas"},
+    {"name": "FII Favorites", "description": "FIIs favoritos"},
+    {"name": "Portfolio", "description": "Carteira de investimentos"},
+    {"name": "Predictions", "description": "Previsões do modelo ML"},
+    {"name": "User Layout", "description": "Preferências de layout da tabela"}
   ],
   "paths": {
     "/stocks": {
       "get": {
-        "summary": "Get all stocks",
-        "responses": {
-          "200": {
-            "description": "Successful operation"
-          }
-        },
-        "tags": ["Stocks"]
+        "tags": ["Stocks"],
+        "summary": "Lista todas as ações",
+        "parameters": [
+          {"name": "page", "in": "query", "type": "integer", "default": 1},
+          {"name": "per_page", "in": "query", "type": "integer", "default": 50},
+          {"name": "sort_by", "in": "query", "type": "string"},
+          {"name": "sort_dir", "in": "query", "type": "string", "enum": ["asc", "desc"]},
+          {"name": "filters", "in": "query", "type": "string", "description": "JSON array de filtros"},
+          {"name": "search", "in": "query", "type": "string", "description": "Busca por ticker ou nome da empresa"}
+        ],
+        "responses": {"200": {"description": "Lista de ações com paginação"}}
       },
       "post": {
-        "summary": "Create a new stock",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "companyid": {"type": "integer"},
-                "companyname": {"type": "string"},
-                "ticker": {"type": "string"},
-                "price": {"type": "number"},
-                "p_l": {"type": "number"},
-                "p_vp": {"type": "number"},
-                "p_ebit": {"type": "number"},
-                "p_ativo": {"type": "number"},
-                "ev_ebit": {"type": "number"},
-                "margembruta": {"type": "number"},
-                "margemebit": {"type": "number"},
-                "margemliquida": {"type": "number"},
-                "p_sr": {"type": "number"},
-                "p_capitalgiro": {"type": "number"},
-                "p_ativocirculante": {"type": "number"},
-                "giroativos": {"type": "number"},
-                "roe": {"type": "number"},
-                "roa": {"type": "number"},
-                "roic": {"type": "number"},
-                "dividaliquidapatrimonioliquido": {"type": "number"},
-                "dividaliquidaebit": {"type": "number"},
-                "pl_ativo": {"type": "number"},
-                "passivo_ativo": {"type": "number"},
-                "liquidezcorrente": {"type": "number"},
-                "peg_ratio": {"type": "number"},
-                "receitas_cagr5": {"type": "number"},
-                "vpa": {"type": "number"},
-                "lpa": {"type": "number"},
-                "valormercado": {"type": "number"},
-                "segmentid": {"type": "integer"},
-                "sectorid": {"type": "integer"},
-                "subsectorid": {"type": "integer"},
-                "subsectorname": {"type": "string"},
-                "segmentname": {"type": "string"},
-                "sectorname": {"type": "string"}
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Stock added successfully"
-          }
-        },
-        "tags": ["Stocks"]
+        "tags": ["Stocks"],
+        "summary": "Cria uma nova ação",
+        "parameters": [{"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}],
+        "responses": {"201": {"description": "Ação criada"}}
       }
     },
     "/stock/{ticker}": {
       "get": {
-        "summary": "Get details of a stock",
-        "parameters": [
-          {
-            "name": "ticker",
-            "in": "path",
-            "description": "Ticker symbol of the stock",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful operation"
-          }
-        },
-        "tags": ["Stocks"]
+        "tags": ["Stocks"],
+        "summary": "Retorna dados de uma ação",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "Dados da ação com previsão ML"}, "404": {"description": "Ação não encontrada"}}
       },
       "put": {
-        "summary": "Edit an existing stock",
+        "tags": ["Stocks"],
+        "summary": "Atualiza uma ação",
         "parameters": [
-          {
-            "name": "ticker",
-            "in": "path",
-            "description": "Ticker symbol of the stock",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                  "companyid": {"type": "integer"},
-                  "companyname": {"type": "string"},
-                  "ticker": {"type": "string"},
-                  "price": {"type": "number"},
-                  "p_l": {"type": "number"},
-                  "p_vp": {"type": "number"},
-                  "p_ebit": {"type": "number"},
-                  "p_ativo": {"type": "number"},
-                  "ev_ebit": {"type": "number"},
-                  "margembruta": {"type": "number"},
-                  "margemebit": {"type": "number"},
-                  "margemliquida": {"type": "number"},
-                  "p_sr": {"type": "number"},
-                  "p_capitalgiro": {"type": "number"},
-                  "p_ativocirculante": {"type": "number"},
-                  "giroativos": {"type": "number"},
-                  "roe": {"type": "number"},
-                  "roa": {"type": "number"},
-                  "roic": {"type": "number"},
-                  "dividaliquidapatrimonioliquido": {"type": "number"},
-                  "dividaliquidaebit": {"type": "number"},
-                  "pl_ativo": {"type": "number"},
-                  "passivo_ativo": {"type": "number"},
-                  "liquidezcorrente": {"type": "number"},
-                  "peg_ratio": {"type": "number"},
-                  "receitas_cagr5": {"type": "number"},
-                  "vpa": {"type": "number"},
-                  "lpa": {"type": "number"},
-                  "valormercado": {"type": "number"},
-                  "segmentid": {"type": "integer"},
-                  "sectorid": {"type": "integer"},
-                  "subsectorid": {"type": "integer"},
-                  "subsectorname": {"type": "string"},
-                  "segmentname": {"type": "string"},
-                  "sectorname": {"type": "string"}
-              }
-            }
-          }
+          {"name": "ticker", "in": "path", "required": true, "type": "string"},
+          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
         ],
-        "responses": {
-          "200": {
-            "description": "Stock edited successfully"
-          }
-        },
-        "tags": ["Stocks"]
+        "responses": {"200": {"description": "Ação atualizada"}}
       },
       "delete": {
-        "summary": "Delete an existing stock",
+        "tags": ["Stocks"],
+        "summary": "Remove uma ação",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "Ação removida"}}
+      }
+    },
+    "/stocks/update-stocks": {
+      "put": {
+        "tags": ["Stocks"],
+        "summary": "Sincroniza ações do StatusInvest (somente ADMIN)",
+        "responses": {"200": {"description": "Ações atualizadas"}}
+      }
+    },
+    "/stocks/predictions": {
+      "get": {
+        "tags": ["Predictions"],
+        "summary": "Lista as últimas previsões ML de todas as ações",
+        "responses": {"200": {"description": "Lista de previsões"}}
+      }
+    },
+    "/stocks/{ticker}/prediction": {
+      "get": {
+        "tags": ["Predictions"],
+        "summary": "Retorna a previsão ML de uma ação específica",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "Previsão ML"}, "404": {"description": "Previsão não encontrada"}}
+      }
+    },
+    "/fiis": {
+      "get": {
+        "tags": ["FIIs"],
+        "summary": "Lista todos os FIIs",
         "parameters": [
-          {
-            "name": "ticker",
-            "in": "path",
-            "description": "Ticker symbol of the stock",
-            "required": true,
-            "type": "string"
-          }
+          {"name": "page", "in": "query", "type": "integer", "default": 1},
+          {"name": "per_page", "in": "query", "type": "integer", "default": 50},
+          {"name": "sort_by", "in": "query", "type": "string"},
+          {"name": "sort_dir", "in": "query", "type": "string", "enum": ["asc", "desc"]},
+          {"name": "filters", "in": "query", "type": "string"},
+          {"name": "search", "in": "query", "type": "string", "description": "Busca por ticker ou nome da empresa"}
         ],
-        "responses": {
-          "200": {
-            "description": "Stock deleted successfully"
-          }
-        },
-        "tags": ["Stocks"]
+        "responses": {"200": {"description": "Lista de FIIs com paginação"}}
+      },
+      "post": {
+        "tags": ["FIIs"],
+        "summary": "Cria um novo FII",
+        "parameters": [{"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}],
+        "responses": {"201": {"description": "FII criado"}}
+      }
+    },
+    "/fii/{ticker}": {
+      "get": {
+        "tags": ["FIIs"],
+        "summary": "Retorna dados de um FII",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "Dados do FII"}, "404": {"description": "FII não encontrado"}}
+      },
+      "put": {
+        "tags": ["FIIs"],
+        "summary": "Atualiza um FII",
+        "parameters": [
+          {"name": "ticker", "in": "path", "required": true, "type": "string"},
+          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
+        ],
+        "responses": {"200": {"description": "FII atualizado"}}
+      },
+      "delete": {
+        "tags": ["FIIs"],
+        "summary": "Remove um FII",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "FII removido"}}
+      }
+    },
+    "/fiis/update-fiis": {
+      "put": {
+        "tags": ["FIIs"],
+        "summary": "Sincroniza FIIs do StatusInvest (somente ADMIN)",
+        "responses": {"200": {"description": "FIIs atualizados"}}
       }
     },
     "/users": {
       "get": {
-        "summary": "Get all users",
-        "responses": {
-          "200": {
-            "description": "Successful operation"
-          }
-        },
-        "tags": ["Users"]
+        "tags": ["Users"],
+        "summary": "Lista todos os usuários",
+        "responses": {"200": {"description": "Lista de usuários"}}
       },
       "post": {
-        "summary": "Create a new user",
+        "tags": ["Users"],
+        "summary": "Cria um novo usuário",
+        "security": [],
         "parameters": [
           {
             "name": "body",
@@ -221,49 +166,43 @@
                 "user_name": {"type": "string"},
                 "name": {"type": "string"},
                 "email": {"type": "string"},
-                "profile": {"type": "string"},
                 "password": {"type": "string"}
               }
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "User added successfully"
-          }
-        },
-        "tags": ["Users"]
+        "responses": {"201": {"description": "Usuário criado"}}
       }
     },
     "/user/{user_id}": {
       "get": {
-        "summary": "Get details of a user",
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "description": "ID of the user",
-            "required": true,
-            "type": "integer"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful operation"
-          }
-        },
-        "tags": ["Users"]
+        "tags": ["Users"],
+        "summary": "Retorna dados de um usuário",
+        "parameters": [{"name": "user_id", "in": "path", "required": true, "type": "integer"}],
+        "responses": {"200": {"description": "Dados do usuário"}}
       },
       "put": {
-        "summary": "Edit an existing user",
+        "tags": ["Users"],
+        "summary": "Atualiza um usuário",
         "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "description": "ID of the user",
-            "required": true,
-            "type": "integer"
-          },
+          {"name": "user_id", "in": "path", "required": true, "type": "integer"},
+          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
+        ],
+        "responses": {"200": {"description": "Usuário atualizado"}}
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Remove um usuário",
+        "parameters": [{"name": "user_id", "in": "path", "required": true, "type": "integer"}],
+        "responses": {"200": {"description": "Usuário removido"}}
+      }
+    },
+    "/user/login": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Autenticação — retorna JWT token",
+        "security": [],
+        "parameters": [
           {
             "name": "body",
             "in": "body",
@@ -271,86 +210,240 @@
             "schema": {
               "type": "object",
               "properties": {
-                "name": {"type": "string"},
-                "email": {"type": "string"},
-                "profile": {"type": "string"},
+                "user_name": {"type": "string"},
                 "password": {"type": "string"}
               }
             }
           }
         ],
         "responses": {
-          "200": {
-            "description": "User edited successfully"
-          }
-        },
-        "tags": ["Users"]
-      },
-      "delete": {
-        "summary": "Delete an existing user",
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "description": "ID of the user",
-            "required": true,
-            "type": "integer"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User deleted successfully"
-          }
-        },
-        "tags": ["Users"]
+          "200": {"description": "Login realizado, retorna access_token"},
+          "401": {"description": "Credenciais inválidas"}
+        }
       }
     },
-    "/user/login": {
+    "/favorites": {
+      "get": {
+        "tags": ["Favorites"],
+        "summary": "Lista ações favoritas do usuário autenticado",
+        "responses": {"200": {"description": "Lista de favoritas"}}
+      },
       "post": {
-        "summary": "User login",
-        "description": "Endpoint to authenticate a user and get a JWT token",
+        "tags": ["Favorites"],
+        "summary": "Adiciona uma favorita (com preços-alvo)",
         "parameters": [
           {
             "name": "body",
             "in": "body",
-            "description": "User credentials",
             "required": true,
             "schema": {
               "type": "object",
               "properties": {
-                "user_name": {
-                  "type": "string",
-                  "example": "user123"
-                },
-                "password": {
-                  "type": "string",
-                  "example": "password123"
-                }
+                "stock_ticker": {"type": "string"},
+                "ceiling_price": {"type": "number"},
+                "target_price": {"type": "number"}
               }
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Login successful",
+        "responses": {"201": {"description": "Favorita adicionada"}}
+      }
+    },
+    "/favorites/alerts": {
+      "get": {
+        "tags": ["Favorites"],
+        "summary": "Lista favoritas com preço atual abaixo do teto ou alvo",
+        "responses": {"200": {"description": "Lista de alertas de preço ativos"}}
+      }
+    },
+    "/favorites/{ticker}": {
+      "post": {
+        "tags": ["Favorites"],
+        "summary": "Adiciona favorita rapidamente por ticker",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"201": {"description": "Favorita adicionada"}}
+      },
+      "delete": {
+        "tags": ["Favorites"],
+        "summary": "Remove favorita por ticker",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "Favorita removida"}}
+      }
+    },
+    "/favorite/{favorite_id}": {
+      "get": {
+        "tags": ["Favorites"],
+        "summary": "Retorna dados de uma favorita",
+        "parameters": [{"name": "favorite_id", "in": "path", "required": true, "type": "integer"}],
+        "responses": {"200": {"description": "Dados da favorita"}}
+      },
+      "put": {
+        "tags": ["Favorites"],
+        "summary": "Atualiza preços-alvo de uma favorita",
+        "parameters": [
+          {"name": "favorite_id", "in": "path", "required": true, "type": "integer"},
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
             "schema": {
               "type": "object",
               "properties": {
-                "access_token": {
-                  "type": "string",
-                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                }
+                "ceiling_price": {"type": "number"},
+                "target_price": {"type": "number"}
               }
             }
-          },
-          "401": {
-            "description": "Unauthorized - invalid credentials"
           }
-        },
-        "tags": [
-          "Users"
-        ]
+        ],
+        "responses": {"200": {"description": "Favorita atualizada"}}
+      },
+      "delete": {
+        "tags": ["Favorites"],
+        "summary": "Remove uma favorita por ID",
+        "parameters": [{"name": "favorite_id", "in": "path", "required": true, "type": "integer"}],
+        "responses": {"200": {"description": "Favorita removida"}}
       }
-    }    
+    },
+    "/favorites/fii": {
+      "get": {
+        "tags": ["FII Favorites"],
+        "summary": "Lista FIIs favoritos do usuário autenticado",
+        "responses": {"200": {"description": "Lista de FIIs favoritos"}}
+      },
+      "post": {
+        "tags": ["FII Favorites"],
+        "summary": "Adiciona FII favorito (com preços-alvo)",
+        "parameters": [{"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}],
+        "responses": {"201": {"description": "FII favorito adicionado"}}
+      }
+    },
+    "/favorites/fii/{ticker}": {
+      "post": {
+        "tags": ["FII Favorites"],
+        "summary": "Adiciona FII favorito por ticker",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"201": {"description": "FII favorito adicionado"}}
+      },
+      "delete": {
+        "tags": ["FII Favorites"],
+        "summary": "Remove FII favorito por ticker",
+        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "FII favorito removido"}}
+      }
+    },
+    "/favorite/fii/{favorite_id}": {
+      "get": {
+        "tags": ["FII Favorites"],
+        "summary": "Retorna um FII favorito por ID",
+        "parameters": [{"name": "favorite_id", "in": "path", "required": true, "type": "integer"}],
+        "responses": {"200": {"description": "Dados do FII favorito"}}
+      },
+      "put": {
+        "tags": ["FII Favorites"],
+        "summary": "Atualiza preços-alvo de um FII favorito",
+        "parameters": [
+          {"name": "favorite_id", "in": "path", "required": true, "type": "integer"},
+          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
+        ],
+        "responses": {"200": {"description": "FII favorito atualizado"}}
+      },
+      "delete": {
+        "tags": ["FII Favorites"],
+        "summary": "Remove FII favorito por ID",
+        "parameters": [{"name": "favorite_id", "in": "path", "required": true, "type": "integer"}],
+        "responses": {"200": {"description": "FII favorito removido"}}
+      }
+    },
+    "/portfolio": {
+      "get": {
+        "tags": ["Portfolio"],
+        "summary": "Lista posições do portfólio com P&L calculado",
+        "responses": {"200": {"description": "Lista de posições enriquecidas com current_price, pnl, pnl_percent"}}
+      },
+      "post": {
+        "tags": ["Portfolio"],
+        "summary": "Adiciona uma posição ao portfólio",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ticker": {"type": "string"},
+                "quantity": {"type": "number"},
+                "average_price": {"type": "number"}
+              }
+            }
+          }
+        ],
+        "responses": {"201": {"description": "Posição adicionada"}}
+      }
+    },
+    "/portfolio/summary": {
+      "get": {
+        "tags": ["Portfolio"],
+        "summary": "Retorna resumo do portfólio (total investido, valor atual, P&L)",
+        "responses": {"200": {"description": "Resumo financeiro do portfólio"}}
+      }
+    },
+    "/portfolio/{position_id}": {
+      "put": {
+        "tags": ["Portfolio"],
+        "summary": "Atualiza uma posição",
+        "parameters": [
+          {"name": "position_id", "in": "path", "required": true, "type": "integer"},
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "quantity": {"type": "number"},
+                "average_price": {"type": "number"}
+              }
+            }
+          }
+        ],
+        "responses": {"200": {"description": "Posição atualizada"}}
+      },
+      "delete": {
+        "tags": ["Portfolio"],
+        "summary": "Remove uma posição",
+        "parameters": [{"name": "position_id", "in": "path", "required": true, "type": "integer"}],
+        "responses": {"200": {"description": "Posição removida"}}
+      }
+    },
+    "/user_layout/{layout}": {
+      "get": {
+        "tags": ["User Layout"],
+        "summary": "Recupera estado salvo de um layout de tabela",
+        "parameters": [{"name": "layout", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "Estado JSON do layout"}}
+      }
+    },
+    "/user_layout": {
+      "post": {
+        "tags": ["User Layout"],
+        "summary": "Salva estado de um layout de tabela",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "layout": {"type": "string"},
+                "estado": {"type": "string"}
+              }
+            }
+          }
+        ],
+        "responses": {"200": {"description": "Layout salvo"}}
+      }
+    }
   }
 }

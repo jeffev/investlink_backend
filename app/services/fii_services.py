@@ -50,7 +50,15 @@ def _apply_filters_and_sort(query, model, allowed_cols, sort_by, sort_dir, filte
     return query
 
 
-def list_fiis(user_id, page=1, per_page=50, sort_by=None, sort_dir="asc", filters=None):
+def list_fiis(
+    user_id,
+    page=1,
+    per_page=50,
+    sort_by=None,
+    sort_dir="asc",
+    filters=None,
+    search=None,
+):
     try:
         per_page = min(per_page, 500)
         favorites = {
@@ -60,6 +68,14 @@ def list_fiis(user_id, page=1, per_page=50, sort_by=None, sort_dir="asc", filter
         query = _apply_filters_and_sort(
             query, Fii, FII_ALLOWED_COLS, sort_by, sort_dir, filters
         )
+        if search:
+            term = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Fii.ticker.ilike(term),
+                    Fii.companyname.ilike(term),
+                )
+            )
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
         fiis_json = [
             {**fii.to_json(), "favorita": fii.ticker in favorites}

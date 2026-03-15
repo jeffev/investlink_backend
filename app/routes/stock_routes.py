@@ -20,7 +20,8 @@ def list_stocks_json():
     sort_dir = request.args.get("sort_dir", "asc")
     filters_raw = request.args.get("filters", None)
     filters = json.loads(filters_raw) if filters_raw else None
-    return list_stocks(user_id, page, per_page, sort_by, sort_dir, filters)
+    search = request.args.get("search", None)
+    return list_stocks(user_id, page, per_page, sort_by, sort_dir, filters, search)
 
 
 def view_stock_json(ticker):

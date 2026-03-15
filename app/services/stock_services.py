@@ -70,7 +70,13 @@ def _apply_filters_and_sort(query, model, allowed_cols, sort_by, sort_dir, filte
 
 
 def list_stocks(
-    user_id, page=1, per_page=50, sort_by=None, sort_dir="asc", filters=None
+    user_id,
+    page=1,
+    per_page=50,
+    sort_by=None,
+    sort_dir="asc",
+    filters=None,
+    search=None,
 ):
     try:
         per_page = min(per_page, 500)
@@ -81,6 +87,14 @@ def list_stocks(
         query = _apply_filters_and_sort(
             query, Stock, STOCK_ALLOWED_COLS, sort_by, sort_dir, filters
         )
+        if search:
+            term = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Stock.ticker.ilike(term),
+                    Stock.companyname.ilike(term),
+                )
+            )
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
         pred_map = get_latest_predictions_map()
         stocks_json = [

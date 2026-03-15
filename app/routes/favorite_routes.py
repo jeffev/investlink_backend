@@ -9,6 +9,7 @@ from services.favorite_services import (
     delete_favorite,
     add_favorite,
     remove_favorite,
+    get_price_alerts,
 )
 
 
@@ -43,3 +44,8 @@ def add_favorite_stock(ticker):
 def remove_favorite_stock(ticker):
     user_id = get_jwt_identity()
     return remove_favorite(user_id, ticker)
+
+
+def list_price_alerts_json():
+    user_id = get_jwt_identity()
+    return get_price_alerts(user_id)

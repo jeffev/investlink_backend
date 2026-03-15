@@ -2,6 +2,7 @@ import functools
 import logging
 
 from flask import jsonify
+from sqlalchemy import or_
 from config import db
 from models.favorite import Favorite
 from models.stock import Stock
@@ -44,6 +45,42 @@ def list_favorites(user_id):
             )
         favorites_json.append(fav_dict)
     return jsonify(favorites_json), 200
+
+
+@handle_db_errors
+def get_price_alerts(user_id):
+    alerts = (
+        Favorite.query.join(Favorite.stock)
+        .filter(
+            Favorite.user_id == user_id,
+            or_(
+                (Favorite.ceiling_price.isnot(None))
+                & (Stock.price <= Favorite.ceiling_price),
+                (Favorite.target_price.isnot(None))
+                & (Stock.price <= Favorite.target_price),
+            ),
+        )
+        .all()
+    )
+    result = []
+    for fav in alerts:
+        stock = fav.stock
+        discount = (
+            round(((fav.ceiling_price - stock.price) / fav.ceiling_price) * 100, 2)
+            if fav.ceiling_price
+            else None
+        )
+        result.append(
+            {
+                "ticker": stock.ticker,
+                "companyname": stock.companyname,
+                "current_price": stock.price,
+                "ceiling_price": fav.ceiling_price,
+                "target_price": fav.target_price,
+                "discount_to_ceiling_percent": discount,
+            }
+        )
+    return jsonify(result), 200
 
 
 @handle_db_errors

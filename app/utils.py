@@ -29,6 +29,7 @@ from routes.favorite_routes import (
     delete_favorite_json,
     add_favorite_stock,
     remove_favorite_stock,
+    list_price_alerts_json,
 )
 from routes.user_layout_routes import get_user_layout_json, save_user_layout_json
 from routes.fii_routes import (
@@ -159,6 +160,11 @@ def setup_routes(app):
         "/v1/favorite/<int:favorite_id>",
         methods=["DELETE"],
         view_func=protected_route(delete_favorite_json),
+    )
+    app.add_url_rule(
+        "/v1/favorites/alerts",
+        methods=["GET"],
+        view_func=protected_route(list_price_alerts_json),
     )
     app.add_url_rule(
         "/v1/favorites/<string:ticker>",

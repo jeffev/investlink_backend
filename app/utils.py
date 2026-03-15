@@ -58,6 +58,11 @@ from routes.portfolio_routes import (
 )
 
 
+def validation_error_response(errors):
+    """Standardize marshmallow ValidationError dict into HTTP 400 response."""
+    return jsonify({"errors": errors}), 400
+
+
 def protected_route(view_func, required_profile=None):
     @wraps(view_func)
     @jwt_required()

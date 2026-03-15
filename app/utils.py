@@ -49,6 +49,13 @@ from routes.favorite_fii_routes import (
     remove_favorite_fii_json,
 )
 from routes.prediction_routes import list_predictions_json, view_prediction_json
+from routes.portfolio_routes import (
+    add_position_json,
+    delete_position_json,
+    edit_position_json,
+    list_portfolio_json,
+    portfolio_summary_json,
+)
 
 
 def protected_route(view_func, required_profile=None):
@@ -246,4 +253,31 @@ def setup_routes(app):
         "/v1/stocks/<string:ticker>/prediction",
         methods=["GET"],
         view_func=protected_route(view_prediction_json),
+    )
+
+    # Portfolio routes
+    app.add_url_rule(
+        "/v1/portfolio",
+        methods=["GET"],
+        view_func=protected_route(list_portfolio_json),
+    )
+    app.add_url_rule(
+        "/v1/portfolio/summary",
+        methods=["GET"],
+        view_func=protected_route(portfolio_summary_json),
+    )
+    app.add_url_rule(
+        "/v1/portfolio",
+        methods=["POST"],
+        view_func=protected_route(add_position_json),
+    )
+    app.add_url_rule(
+        "/v1/portfolio/<int:position_id>",
+        methods=["PUT"],
+        view_func=protected_route(edit_position_json),
+    )
+    app.add_url_rule(
+        "/v1/portfolio/<int:position_id>",
+        methods=["DELETE"],
+        view_func=protected_route(delete_position_json),
     )

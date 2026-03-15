@@ -41,4 +41,4 @@ jobs:
 
       - name: Run tests
         run: |
-          PYTHONPATH=app pytest --cov=app -q
+          PYTHONPATH=app pytest --cov=app --cov-fail-under=80 -q

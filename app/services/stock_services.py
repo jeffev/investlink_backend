@@ -135,6 +135,19 @@ def view_stock(ticker):
         return jsonify({"message": "An error occurred, please try again later"}), 500
 
 
+def bulk_view_stocks(tickers):
+    try:
+        if not tickers:
+            return jsonify([]), 200
+        stocks = Stock.query.filter(Stock.ticker.in_(tickers)).all()
+        pred_map = get_latest_predictions_map()
+        result = [attach_ml_fields(s.to_json(), pred_map.get(s.ticker)) for s in stocks]
+        return jsonify(result), 200
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        return jsonify({"message": "An error occurred, please try again later"}), 500
+
+
 def new_stock(stock_data):
     try:
         if Stock.query.filter_by(ticker=stock_data["ticker"]).first():

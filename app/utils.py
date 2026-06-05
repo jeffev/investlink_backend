@@ -8,6 +8,7 @@ from config import db
 from routes.stock_routes import (
     list_stocks_json,
     view_stock_json,
+    bulk_view_stocks_json,
     new_stock_json,
     edit_stock_json,
     delete_stock_json,
@@ -158,6 +159,11 @@ def setup_routes(app):
         "/v1/stock/<string:ticker>/history",
         methods=["GET"],
         view_func=protected_route(get_stock_history_json),
+    )
+    app.add_url_rule(
+        "/v1/stocks/bulk",
+        methods=["GET"],
+        view_func=protected_route(bulk_view_stocks_json),
     )
 
     # User routes

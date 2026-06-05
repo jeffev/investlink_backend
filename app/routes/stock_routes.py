@@ -5,6 +5,7 @@ from flask_jwt_extended import get_jwt_identity
 from services.stock_services import (
     list_stocks,
     view_stock,
+    bulk_view_stocks,
     new_stock,
     edit_stock,
     delete_stock,
@@ -50,3 +51,9 @@ def update_stocks():
 def get_stock_history_json(ticker):
     days = request.args.get("days", 90, type=int)
     return get_stock_price_history(ticker.upper(), days)
+
+
+def bulk_view_stocks_json():
+    tickers_raw = request.args.get("tickers", "")
+    tickers = [t.strip().upper() for t in tickers_raw.split(",") if t.strip()]
+    return bulk_view_stocks(tickers)

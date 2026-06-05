@@ -69,6 +69,8 @@ from routes.strategy_routes import (
     delete_strategy_json,
 )
 from routes.prediction_routes import list_predictions_json, view_prediction_json
+from routes.backtest_routes import run_backtest_json
+from routes.news_routes import get_news_json
 from routes.portfolio_routes import (
     add_position_json,
     delete_position_json,
@@ -414,4 +416,18 @@ def setup_routes(app):
         "/v1/portfolio/projected-income",
         methods=["GET"],
         view_func=protected_route(projected_income_json),
+    )
+
+    # Backtest routes
+    app.add_url_rule(
+        "/v1/strategy/<int:strategy_id>/backtest",
+        methods=["GET"],
+        view_func=protected_route(run_backtest_json),
+    )
+
+    # News routes
+    app.add_url_rule(
+        "/v1/news",
+        methods=["GET"],
+        view_func=protected_route(get_news_json),
     )

@@ -57,6 +57,7 @@ from routes.favorite_fii_routes import (
     remove_favorite_fii_json,
 )
 from routes.auth_routes import refresh_token_json
+from routes.benchmark_routes import get_benchmarks_json
 from routes.transaction_routes import (
     list_transactions_json,
     create_transaction_json,
@@ -115,6 +116,13 @@ def protected_route(view_func, required_profile=None):
 def setup_routes(app):
     # Auth routes
     app.add_url_rule("/v1/auth/refresh", methods=["POST"], view_func=refresh_token_json)
+
+    # Benchmark routes
+    app.add_url_rule(
+        "/v1/benchmarks",
+        methods=["GET"],
+        view_func=protected_route(get_benchmarks_json),
+    )
 
     # Transaction routes
     app.add_url_rule(

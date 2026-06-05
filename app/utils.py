@@ -63,6 +63,12 @@ from routes.portfolio_routes import (
     edit_position_json,
     list_portfolio_json,
     portfolio_summary_json,
+    list_portfolio_fii_json,
+    portfolio_fii_summary_json,
+    add_fii_position_json,
+    edit_fii_position_json,
+    delete_fii_position_json,
+    projected_income_json,
 )
 
 
@@ -291,7 +297,7 @@ def setup_routes(app):
         view_func=protected_route(view_prediction_json),
     )
 
-    # Portfolio routes
+    # Portfolio routes (ações)
     app.add_url_rule(
         "/v1/portfolio",
         methods=["GET"],
@@ -316,4 +322,38 @@ def setup_routes(app):
         "/v1/portfolio/<int:position_id>",
         methods=["DELETE"],
         view_func=protected_route(delete_position_json),
+    )
+
+    # Portfolio routes (FIIs) — registradas antes de /<int:id> para não colidir
+    app.add_url_rule(
+        "/v1/portfolio/fii",
+        methods=["GET"],
+        view_func=protected_route(list_portfolio_fii_json),
+    )
+    app.add_url_rule(
+        "/v1/portfolio/fii/summary",
+        methods=["GET"],
+        view_func=protected_route(portfolio_fii_summary_json),
+    )
+    app.add_url_rule(
+        "/v1/portfolio/fii",
+        methods=["POST"],
+        view_func=protected_route(add_fii_position_json),
+    )
+    app.add_url_rule(
+        "/v1/portfolio/fii/<int:position_id>",
+        methods=["PUT"],
+        view_func=protected_route(edit_fii_position_json),
+    )
+    app.add_url_rule(
+        "/v1/portfolio/fii/<int:position_id>",
+        methods=["DELETE"],
+        view_func=protected_route(delete_fii_position_json),
+    )
+
+    # Projected income
+    app.add_url_rule(
+        "/v1/portfolio/projected-income",
+        methods=["GET"],
+        view_func=protected_route(projected_income_json),
     )

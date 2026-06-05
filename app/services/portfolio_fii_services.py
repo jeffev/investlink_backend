@@ -25,6 +25,7 @@ def _calculate_fii_pnl(position_json, fii):
     return {
         **position_json,
         "companyname": fii.companyname if fii else None,
+        "sectorname": fii.sectorname if fii else None,
         "current_price": current_price,
         "current_value": current_value,
         "pnl": pnl,

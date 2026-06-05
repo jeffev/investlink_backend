@@ -57,6 +57,11 @@ from routes.favorite_fii_routes import (
     remove_favorite_fii_json,
 )
 from routes.auth_routes import refresh_token_json
+from routes.transaction_routes import (
+    list_transactions_json,
+    create_transaction_json,
+    delete_transaction_json,
+)
 from routes.strategy_routes import (
     list_strategies_json,
     create_strategy_json,
@@ -110,6 +115,23 @@ def protected_route(view_func, required_profile=None):
 def setup_routes(app):
     # Auth routes
     app.add_url_rule("/v1/auth/refresh", methods=["POST"], view_func=refresh_token_json)
+
+    # Transaction routes
+    app.add_url_rule(
+        "/v1/transactions",
+        methods=["GET"],
+        view_func=protected_route(list_transactions_json),
+    )
+    app.add_url_rule(
+        "/v1/transactions",
+        methods=["POST"],
+        view_func=protected_route(create_transaction_json),
+    )
+    app.add_url_rule(
+        "/v1/transaction/<int:transaction_id>",
+        methods=["DELETE"],
+        view_func=protected_route(delete_transaction_json),
+    )
 
     # Strategy routes
     app.add_url_rule(

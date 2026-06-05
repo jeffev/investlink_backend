@@ -51,8 +51,11 @@ def list_portfolio(user_id):
     positions = Portfolio.query.filter_by(user_id=user_id).all()
     result = []
     for position in positions:
-        current_price = position.stock.price if position.stock else None
+        stock = position.stock
+        current_price = stock.price if stock else None
         enriched = _calculate_pnl(position.to_json(), current_price)
+        enriched["companyname"] = stock.companyname if stock else None
+        enriched["sectorname"] = stock.sectorname if stock else None
         result.append(enriched)
     return jsonify(result), 200
 

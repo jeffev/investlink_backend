@@ -56,6 +56,11 @@ from routes.favorite_fii_routes import (
     remove_favorite_fii_json,
 )
 from routes.auth_routes import refresh_token_json
+from routes.strategy_routes import (
+    list_strategies_json,
+    create_strategy_json,
+    delete_strategy_json,
+)
 from routes.prediction_routes import list_predictions_json, view_prediction_json
 from routes.portfolio_routes import (
     add_position_json,
@@ -104,6 +109,23 @@ def protected_route(view_func, required_profile=None):
 def setup_routes(app):
     # Auth routes
     app.add_url_rule("/v1/auth/refresh", methods=["POST"], view_func=refresh_token_json)
+
+    # Strategy routes
+    app.add_url_rule(
+        "/v1/strategies",
+        methods=["GET"],
+        view_func=protected_route(list_strategies_json),
+    )
+    app.add_url_rule(
+        "/v1/strategies",
+        methods=["POST"],
+        view_func=protected_route(create_strategy_json),
+    )
+    app.add_url_rule(
+        "/v1/strategy/<int:strategy_id>",
+        methods=["DELETE"],
+        view_func=protected_route(delete_strategy_json),
+    )
 
     # Stock routes
     app.add_url_rule(

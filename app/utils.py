@@ -12,6 +12,7 @@ from routes.stock_routes import (
     edit_stock_json,
     delete_stock_json,
     update_all_stocks,
+    get_stock_history_json,
 )
 from routes.user_routes import (
     list_users_json,
@@ -124,6 +125,11 @@ def setup_routes(app):
         "/v1/stocks/update-stocks",
         methods=["PUT"],
         view_func=protected_route(update_all_stocks, required_profile="ADMIN"),
+    )
+    app.add_url_rule(
+        "/v1/stock/<string:ticker>/history",
+        methods=["GET"],
+        view_func=protected_route(get_stock_history_json),
     )
 
     # User routes

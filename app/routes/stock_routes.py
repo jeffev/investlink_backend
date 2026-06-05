@@ -10,6 +10,7 @@ from services.stock_services import (
     delete_stock,
     update_all_stocks,
 )
+from services.stock_history_service import get_stock_price_history
 
 
 def list_stocks_json():
@@ -44,3 +45,8 @@ def delete_stock_json(ticker):
 
 def update_stocks():
     return update_all_stocks()
+
+
+def get_stock_history_json(ticker):
+    days = request.args.get("days", 90, type=int)
+    return get_stock_price_history(ticker.upper(), days)

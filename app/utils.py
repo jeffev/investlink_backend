@@ -3,7 +3,7 @@ from functools import wraps
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from models.user import User
-from config import db
+from config import db, limiter
 
 from routes.stock_routes import (
     list_stocks_json,
@@ -207,7 +207,11 @@ def setup_routes(app):
         methods=["GET"],
         view_func=protected_route(view_user_json),
     )
-    app.add_url_rule("/v1/users", methods=["POST"], view_func=new_user_json)
+    app.add_url_rule(
+        "/v1/users",
+        methods=["POST"],
+        view_func=limiter.limit("5 per minute")(new_user_json),
+    )
     app.add_url_rule(
         "/v1/user/<int:user_id>",
         methods=["PUT"],
@@ -218,7 +222,11 @@ def setup_routes(app):
         methods=["DELETE"],
         view_func=protected_route(delete_user_json),
     )
-    app.add_url_rule("/v1/user/login", methods=["POST"], view_func=login_user_json)
+    app.add_url_rule(
+        "/v1/user/login",
+        methods=["POST"],
+        view_func=limiter.limit("5 per minute")(login_user_json),
+    )
     app.add_url_rule(
         "/v1/user/<int:user_id>/password",
         methods=["PUT"],

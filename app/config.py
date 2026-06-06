@@ -1,7 +1,10 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_limiter.errors import RateLimitExceeded
 from dotenv import load_dotenv
 import os
 
@@ -10,6 +13,9 @@ load_dotenv()
 db = SQLAlchemy()
 jwt = JWTManager()
 migrate = Migrate()
+limiter = Limiter(
+    key_func=get_remote_address, default_limits=[], storage_uri="memory://"
+)
 
 
 def create_app():
@@ -25,5 +31,13 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    limiter.init_app(app)
+
+    @app.errorhandler(RateLimitExceeded)
+    def handle_rate_limit(e):
+        return (
+            jsonify({"message": "Muitas tentativas. Tente novamente em 1 minuto."}),
+            429,
+        )
 
     return app

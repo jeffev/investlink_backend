@@ -20,6 +20,8 @@ services:
         value: visitante
       - key: ALLOW_SIGNUP
         value: "false"
+      - key: CORS_ORIGINS
+        value: https://investlink-demo.vercel.app
       # 512 MB no plano gratuito: três workers não cabem com folga.
       - key: GUNICORN_WORKERS
         value: "2"

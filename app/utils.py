@@ -24,6 +24,7 @@ from routes.user_routes import (
     edit_user_json,
     delete_user_json,
     login_user_json,
+    login_demo_json,
     change_password_json,
 )
 from routes.favorite_routes import (
@@ -249,6 +250,11 @@ def setup_routes(app):
         "/v1/user/login",
         methods=["POST"],
         view_func=limiter.limit("5 per minute")(login_user_json),
+    )
+    app.add_url_rule(
+        "/v1/user/demo-login",
+        methods=["POST"],
+        view_func=limiter.limit("20 per minute")(login_demo_json),
     )
     app.add_url_rule(
         "/v1/user/<int:user_id>/password",

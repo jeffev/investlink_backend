@@ -141,6 +141,32 @@ def delete_user(user_id):
         return jsonify({"message": "Error deleting user"}), 500
 
 
+def _session_payload(user):
+    return {
+        "profile": user.profile,
+        "name": user.name,
+        "user_name": user.user_name,
+        "access_token": create_access_token(identity=user.id, expires_delta=expires),
+        "refresh_token": create_refresh_token(identity=user.id),
+    }
+
+
+def login_demo_user(demo_user_name):
+    """
+    Entrada da demo pública sem senha: o visitante recebe a sessão da conta
+    compartilhada. Sem senha não há credencial embutida no frontend para vazar
+    nem para alguém trocar e trancar a demo.
+    """
+    try:
+        user = User.query.filter_by(user_name=demo_user_name).first()
+        if user is None:
+            return jsonify({"message": "Conta demo não encontrada"}), 404
+        return jsonify(_session_payload(user)), 200
+    except Exception as e:
+        logger.error(f"Error logging in demo user: {e}")
+        return jsonify({"message": "Error logging in user"}), 500
+
+
 def login_user(login_data):
     try:
         if "user_name" not in login_data or "password" not in login_data:
@@ -156,17 +182,7 @@ def login_user(login_data):
         if user and bcrypt.checkpw(
             login_data["password"].encode("utf-8"), user.password.encode("utf-8")
         ):
-            access_token = create_access_token(identity=user.id, expires_delta=expires)
-            refresh_token = create_refresh_token(identity=user.id)
-
-            response_data = {
-                "profile": user.profile,
-                "name": user.name,
-                "user_name": user.user_name,
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-            }
-            return jsonify(response_data), 200
+            return jsonify(_session_payload(user)), 200
         else:
             return jsonify({"message": "Invalid username or password"}), 401
     except Exception as e:

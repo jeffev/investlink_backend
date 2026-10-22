@@ -615,6 +615,23 @@
         }
       }
     },
+    "/user/demo-login": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Entrada da demo pública, sem senha — só existe com DEMO_USER_NAME definido",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Sessão da conta demo, retorna access_token"
+          },
+          "404": {
+            "description": "Demo desativada"
+          }
+        }
+      }
+    },
     "/favorites": {
       "get": {
         "tags": [

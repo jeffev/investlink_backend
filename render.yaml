@@ -1,0 +1,25 @@
+# Demo pública no plano gratuito do Render. O banco é externo (Neon), então
+# DATABASE_URL é pedido na criação do Blueprint e nunca entra no repositório.
+services:
+  - type: web
+    name: investlink-api
+    runtime: docker
+    plan: free
+    region: ohio
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: DEMO_USER_NAME
+        value: visitante
+      - key: ALLOW_SIGNUP
+        value: "false"
+      # 512 MB no plano gratuito: três workers não cabem com folga.
+      - key: GUNICORN_WORKERS
+        value: "2"

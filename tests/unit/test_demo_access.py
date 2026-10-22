@@ -124,3 +124,30 @@ def test_rotas_que_mexem_na_base_exigem_admin(metodo, rota):
         setup_routes(falso)
 
     assert registradas[(metodo, rota)][1] == "ADMIN"
+
+
+def test_entrada_demo_some_quando_a_demo_esta_desligada(app):
+    from routes.user_routes import login_demo_json
+
+    with app.test_request_context(json={}):
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("routes.user_routes.login_demo_user") as service,
+        ):
+            resposta = login_demo_json()
+    assert _status(resposta) == 404
+    service.assert_not_called()
+
+
+def test_entrada_demo_abre_so_a_conta_configurada(app):
+    from routes.user_routes import login_demo_json
+
+    with app.test_request_context(json={}):
+        with (
+            patch.dict("os.environ", {"DEMO_USER_NAME": "demo"}),
+            patch(
+                "routes.user_routes.login_demo_user", return_value=("ok", 200)
+            ) as service,
+        ):
+            login_demo_json()
+    service.assert_called_once_with("demo")

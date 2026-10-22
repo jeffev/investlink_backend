@@ -1,6 +1,7 @@
 import bcrypt
 import logging
 import os
+import secrets
 
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_cors import CORS
@@ -73,28 +74,22 @@ def seed_admin():
 
 def seed_demo_user():
     """
-    Conta compartilhada da demo pública. Só existe quando DEMO_USER_NAME e
-    DEMO_PASSWORD estão definidos; a senha é reaplicada a cada boot para que a
-    conta volte a funcionar mesmo que alguém dê um jeito de alterá-la.
+    Conta compartilhada da demo pública, criada quando DEMO_USER_NAME existe.
+    A entrada é pelo /v1/user/demo-login, sem senha; a senha gravada é
+    aleatória e ninguém a conhece, então o login comum nunca abre essa conta.
     """
     user_name = os.environ.get("DEMO_USER_NAME")
-    password = os.environ.get("DEMO_PASSWORD")
-    if not user_name or not password:
+    if not user_name or User.query.filter_by(user_name=user_name).first():
         return
-    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    user = User.query.filter_by(user_name=user_name).first()
-    if user is None:
-        user = User(
-            user_name=user_name,
-            name="Visitante",
-            email=f"{user_name}@investlink.local",
-            profile="USER",
-            password=hashed,
-        )
-        db.session.add(user)
-    else:
-        user.password = hashed
-        user.profile = "USER"
+    unusable = secrets.token_urlsafe(32).encode("utf-8")
+    demo = User(
+        user_name=user_name,
+        name="Visitante",
+        email=f"{user_name}@investlink.local",
+        profile="USER",
+        password=bcrypt.hashpw(unusable, bcrypt.gensalt()).decode("utf-8"),
+    )
+    db.session.add(demo)
     db.session.commit()
 
 

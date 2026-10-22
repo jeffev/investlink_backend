@@ -19,6 +19,7 @@ from services.user_services import (
     edit_user,
     delete_user,
     login_user,
+    login_demo_user,
     change_password,
 )
 
@@ -87,6 +88,13 @@ def login_user_json():
     if error:
         return error
     return login_user(login_data)
+
+
+def login_demo_json():
+    demo_user_name = os.environ.get("DEMO_USER_NAME")
+    if not demo_user_name:
+        return jsonify({"message": "Demo desativada."}), 404
+    return login_demo_user(demo_user_name)
 
 
 def change_password_json(user_id):

@@ -22,10 +22,13 @@ class TestPortfolioFiiServices:
             with patch(
                 "services.portfolio_fii_services.PortfolioFii.query"
             ) as mock_query:
-                mock_query.filter_by.return_value.all.return_value = []
+                paged = mock_query.filter_by.return_value
+                paged.count.return_value = 0
+                paged.offset.return_value.limit.return_value.all.return_value = []
                 result, status = list_portfolio_fii(1)
                 assert status == 200
-                assert result.get_json() == []
+                assert result.get_json()["data"] == []
+                assert result.get_json()["pagination"]["total"] == 0
 
     def test_list_portfolio_fii_with_position(self, app, sample_fii):
         """Posição FII com lastdividend calcula monthly_income corretamente."""
@@ -50,11 +53,16 @@ class TestPortfolioFiiServices:
             with patch(
                 "services.portfolio_fii_services.PortfolioFii.query"
             ) as mock_query:
-                mock_query.filter_by.return_value.all.return_value = [mock_pos]
+                # A listagem agora pagina: conta e recorta em vez de .all().
+                paged = mock_query.filter_by.return_value
+                paged.count.return_value = 1
+                paged.offset.return_value.limit.return_value.all.return_value = [
+                    mock_pos
+                ]
                 result, status = list_portfolio_fii(1)
 
                 assert status == 200
-                data = result.get_json()
+                data = result.get_json()["data"]
                 assert len(data) == 1
                 assert data[0]["monthly_income"] == round(50.0 * 0.80, 2)
                 assert data[0]["current_price"] == 100.0

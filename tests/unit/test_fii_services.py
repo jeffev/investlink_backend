@@ -39,9 +39,15 @@ class TestFiiServices:
             with (
                 patch("services.fii_services.Fii.query") as mock_fii_query,
                 patch("services.fii_services.FavoriteFii.query") as mock_favorite_query,
+                patch("services.fii_services.get_score_map", return_value={}),
             ):
 
-                mock_fii_query.paginate.return_value = mock_paginated
+                # A listagem passou a fazer outerjoin com fii_scores para
+                # poder ordenar pelo score, então a paginação já não pende
+                # direto da query.
+                mock_fii_query.outerjoin.return_value.paginate.return_value = (
+                    mock_paginated
+                )
                 mock_favorite_query.filter_by.return_value.all.return_value = [
                     mock_favorite
                 ]
@@ -68,9 +74,15 @@ class TestFiiServices:
             with (
                 patch("services.fii_services.Fii.query") as mock_fii_query,
                 patch("services.fii_services.FavoriteFii.query") as mock_favorite_query,
+                patch("services.fii_services.get_score_map", return_value={}),
             ):
 
-                mock_fii_query.paginate.return_value = mock_paginated
+                # A listagem passou a fazer outerjoin com fii_scores para
+                # poder ordenar pelo score, então a paginação já não pende
+                # direto da query.
+                mock_fii_query.outerjoin.return_value.paginate.return_value = (
+                    mock_paginated
+                )
                 mock_favorite_query.filter_by.return_value.all.return_value = []
 
                 result, status_code = list_fiis(1)
@@ -323,8 +335,9 @@ class TestFiiServices:
                 result_data = result.get_json()
                 assert "An error occurred" in result_data["message"]
 
-    @patch("services.fii_services.requests.get")
-    def test_get_all_fiis_from_statusinvest_success(self, mock_get):
+    @patch("services.fii_services.cloudscraper.create_scraper")
+    def test_get_all_fiis_from_statusinvest_success(self, mock_create_scraper):
+        mock_get = mock_create_scraper.return_value.get
         """Test successful retrieval of FIIs from StatusInvest"""
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -348,8 +361,9 @@ class TestFiiServices:
         assert len(result["list"]) == 1
         assert result["list"][0]["ticker"] == "KNRI11"
 
-    @patch("services.fii_services.requests.get")
-    def test_get_all_fiis_from_statusinvest_http_error(self, mock_get):
+    @patch("services.fii_services.cloudscraper.create_scraper")
+    def test_get_all_fiis_from_statusinvest_http_error(self, mock_create_scraper):
+        mock_get = mock_create_scraper.return_value.get
         """Test retrieval of FIIs when HTTP error occurs"""
         mock_response = MagicMock()
         mock_response.status_code = 500
@@ -359,8 +373,9 @@ class TestFiiServices:
 
         assert result is None
 
-    @patch("services.fii_services.requests.get")
-    def test_get_all_fiis_from_statusinvest_exception(self, mock_get):
+    @patch("services.fii_services.cloudscraper.create_scraper")
+    def test_get_all_fiis_from_statusinvest_exception(self, mock_create_scraper):
+        mock_get = mock_create_scraper.return_value.get
         """Test retrieval of FIIs when an exception occurs"""
         mock_get.side_effect = Exception("Network error")
 
@@ -405,10 +420,12 @@ class TestFiiServices:
                 result_data = result.get_json()
                 assert result_data["message"] == "FIIs updated successfully."
 
+    @patch("services.fii_services.get_all_fiis_from_fundamentus")
     @patch("services.fii_services.get_all_fiis_from_statusinvest")
-    def test_update_all_fiis_no_data(self, mock_get_fiis, app):
-        """Test update of FIIs when no data is returned"""
+    def test_update_all_fiis_no_data(self, mock_get_fiis, mock_get_fundamentus, app):
+        """Test update of FIIs when both sources return no data"""
         with app.app_context():
+            mock_get_fundamentus.return_value = None
             mock_get_fiis.return_value = None
 
             result, status_code = update_all_fiis()
@@ -432,3 +449,92 @@ class TestFiiServices:
                 assert status_code == 500
                 result_data = result.get_json()
                 assert "An error occurred" in result_data["message"]
+
+
+class _FiiScoreStub:
+    """Dublê com o contrato to_json do FiiScore."""
+
+    def __init__(self, ticker, total):
+        self.ticker = ticker
+        self.score_total = total
+
+    def to_json(self):
+        return {
+            "ticker": self.ticker,
+            "profile": "EQUILIBRADO",
+            "score_total": self.score_total,
+            "eligible": True,
+            "pillars": [{"key": "renda", "label": "Renda", "value": 80.0}],
+            "reasons": [],
+            "red_flags": [],
+            "exclusion_reasons": [],
+        }
+
+
+def _listar(sort_by=None, profile=None, score=None):
+    fii = MagicMock(spec=Fii)
+    fii.ticker = "HGLG11"
+    fii.to_json.return_value = {"ticker": "HGLG11", "p_vp": 0.89}
+
+    paginated = MagicMock()
+    paginated.items = [fii]
+    paginated.total = 1
+    paginated.pages = 1
+    paginated.page = 1
+
+    with (
+        patch("services.fii_services.Fii.query") as fii_query,
+        patch("services.fii_services.FavoriteFii.query") as favorite_query,
+        patch(
+            "services.fii_services.get_score_map",
+            return_value={"HGLG11": score} if score else {},
+        ),
+    ):
+        joined = fii_query.outerjoin.return_value
+        joined.paginate.return_value = paginated
+        joined.order_by.return_value.paginate.return_value = paginated
+        favorite_query.filter_by.return_value.all.return_value = []
+
+        response, status = list_fiis(
+            1, sort_by=sort_by, sort_dir="desc", profile=profile
+        )
+        return response, status, joined
+
+
+def test_a_tabela_de_fii_carrega_o_score(app):
+    # A camada densa e a vitrine precisam mostrar a mesma nota; sem isto o
+    # investidor veria 84 no card e nada na tabela.
+    with app.app_context():
+        response, status, _ = _listar(score=_FiiScoreStub("HGLG11", 84.2))
+
+        assert status == 200
+        linha = response.get_json()["data"][0]
+        assert linha["score_total"] == 84.2
+        assert linha["score_pillars"][0]["key"] == "renda"
+
+
+def test_fundo_sem_score_continua_na_tabela(app):
+    # O join é à esquerda de propósito: sumir com o fundo esconderia o ativo
+    # em vez de esconder a nota.
+    with app.app_context():
+        response, status, _ = _listar()
+
+        assert status == 200
+        assert response.get_json()["data"][0]["score_total"] is None
+
+
+def test_ordenar_por_score_usa_a_coluna_da_tabela_de_score(app):
+    with app.app_context():
+        _, _, joined = _listar(sort_by="score_total")
+        joined.order_by.assert_called()
+
+
+def test_perfil_invalido_cai_no_padrao(app):
+    # CRESCIMENTO é perfil de ação. Aceitar em silêncio devolveria a tabela
+    # ordenada por uma nota que não é a pedida.
+    with app.app_context():
+        response, status, _ = _listar(
+            profile="CRESCIMENTO", score=_FiiScoreStub("HGLG11", 84.2)
+        )
+        assert status == 200
+        assert response.get_json()["data"][0]["score_profile"] == "EQUILIBRADO"

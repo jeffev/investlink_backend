@@ -28,6 +28,14 @@ class Fii(db.Model):
     patrimonio = db.Column(db.Float)
     lastdividend = db.Column(db.Float)
 
+    # Indicadores que o Fundamentus publica e que ninguém estava lendo.
+    # `vacancia_media` e `qtd_imoveis` só dizem algo em fundo de tijolo: num
+    # fundo de papel valem zero por não existirem, não por serem ótimos.
+    ffo_yield = db.Column(db.Float)
+    qtd_imoveis = db.Column(db.Integer)
+    cap_rate = db.Column(db.Float)
+    vacancia_media = db.Column(db.Float)
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -63,6 +71,10 @@ class Fii(db.Model):
             "numerocotas": self.numerocotas,
             "patrimonio": self.patrimonio,
             "lastdividend": self.lastdividend,
+            "ffo_yield": self.ffo_yield,
+            "qtd_imoveis": self.qtd_imoveis,
+            "cap_rate": self.cap_rate,
+            "vacancia_media": self.vacancia_media,
         }
 
 

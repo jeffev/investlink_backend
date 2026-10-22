@@ -41,10 +41,39 @@ def attach_ml_fields(stock_json, pred):
     return stock_json
 
 
-def get_all_predictions():
+DEFAULT_PER_PAGE = 200
+
+
+def get_all_predictions(page=1, per_page=DEFAULT_PER_PAGE):
+    """
+    Latest prediction per ticker, one page at a time.
+
+    Paginated to match every other listing, but the page defaults wide enough
+    that the dashboard still gets the whole universe in one call.
+    """
     try:
-        predictions = get_latest_predictions_map().values()
-        return jsonify({"data": [p.to_json() for p in predictions]}), 200
+        per_page = max(1, min(per_page, 1000))
+        page = max(1, page)
+        predictions = sorted(
+            get_latest_predictions_map().values(), key=lambda p: p.ticker
+        )
+        total = len(predictions)
+        start = (page - 1) * per_page
+        window = predictions[start : start + per_page]
+        return (
+            jsonify(
+                {
+                    "data": [p.to_json() for p in window],
+                    "pagination": {
+                        "total": total,
+                        "current_page": page,
+                        "per_page": per_page,
+                        "pages": (total + per_page - 1) // per_page,
+                    },
+                }
+            ),
+            200,
+        )
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500

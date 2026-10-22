@@ -21,7 +21,10 @@ def list_fiis_json():
     filters_raw = request.args.get("filters", None)
     filters = json.loads(filters_raw) if filters_raw else None
     search = request.args.get("search", None)
-    return list_fiis(user_id, page, per_page, sort_by, sort_dir, filters, search)
+    profile = request.args.get("profile", None)
+    return list_fiis(
+        user_id, page, per_page, sort_by, sort_dir, filters, search, profile
+    )
 
 
 def view_fii_json(ticker):

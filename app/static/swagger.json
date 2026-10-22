@@ -7,7 +7,9 @@
   },
   "host": "localhost:5000",
   "basePath": "/v1",
-  "schemes": ["http"],
+  "schemes": [
+    "http"
+  ],
   "securityDefinitions": {
     "Bearer": {
       "type": "apiKey",
@@ -16,143 +18,450 @@
       "description": "JWT token no formato: Bearer {token}"
     }
   },
-  "security": [{"Bearer": []}],
+  "security": [
+    {
+      "Bearer": []
+    }
+  ],
   "tags": [
-    {"name": "Stocks", "description": "Ações da bolsa"},
-    {"name": "FIIs", "description": "Fundos de Investimento Imobiliário"},
-    {"name": "Users", "description": "Usuários e autenticação"},
-    {"name": "Favorites", "description": "Ações favoritas"},
-    {"name": "FII Favorites", "description": "FIIs favoritos"},
-    {"name": "Portfolio", "description": "Carteira de investimentos"},
-    {"name": "Predictions", "description": "Previsões do modelo ML"},
-    {"name": "User Layout", "description": "Preferências de layout da tabela"}
+    {
+      "name": "Stocks",
+      "description": "Ações da bolsa"
+    },
+    {
+      "name": "FIIs",
+      "description": "Fundos de Investimento Imobiliário"
+    },
+    {
+      "name": "Users",
+      "description": "Usuários e autenticação"
+    },
+    {
+      "name": "Favorites",
+      "description": "Ações favoritas"
+    },
+    {
+      "name": "FII Favorites",
+      "description": "FIIs favoritos"
+    },
+    {
+      "name": "Portfolio",
+      "description": "Carteira de investimentos"
+    },
+    {
+      "name": "Predictions",
+      "description": "Previsões do modelo ML"
+    },
+    {
+      "name": "User Layout",
+      "description": "Preferências de layout da tabela"
+    },
+    {
+      "name": "Opportunities",
+      "description": "Score fundamentalista e vitrine de oportunidades"
+    }
   ],
   "paths": {
     "/stocks": {
       "get": {
-        "tags": ["Stocks"],
+        "tags": [
+          "Stocks"
+        ],
         "summary": "Lista todas as ações",
         "parameters": [
-          {"name": "page", "in": "query", "type": "integer", "default": 1},
-          {"name": "per_page", "in": "query", "type": "integer", "default": 50},
-          {"name": "sort_by", "in": "query", "type": "string"},
-          {"name": "sort_dir", "in": "query", "type": "string", "enum": ["asc", "desc"]},
-          {"name": "filters", "in": "query", "type": "string", "description": "JSON array de filtros"},
-          {"name": "search", "in": "query", "type": "string", "description": "Busca por ticker ou nome da empresa"}
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "type": "integer",
+            "default": 50
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "type": "string",
+            "description": "Qualquer coluna da tabela, mais score_total (exige o join com stock_scores, feito automaticamente)"
+          },
+          {
+            "name": "sort_dir",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "type": "string",
+            "description": "JSON array de filtros"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string",
+            "description": "Busca por ticker ou nome da empresa"
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "type": "string",
+            "default": "EQUILIBRADO",
+            "description": "Perfil de pesos do score; também habilita sort_by=score_total"
+          }
         ],
-        "responses": {"200": {"description": "Lista de ações com paginação"}}
+        "responses": {
+          "200": {
+            "description": "Lista de ações com paginação"
+          }
+        }
       },
       "post": {
-        "tags": ["Stocks"],
+        "tags": [
+          "Stocks"
+        ],
         "summary": "Cria uma nova ação",
-        "parameters": [{"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}],
-        "responses": {"201": {"description": "Ação criada"}}
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Ação criada"
+          }
+        }
       }
     },
     "/stock/{ticker}": {
       "get": {
-        "tags": ["Stocks"],
+        "tags": [
+          "Stocks"
+        ],
         "summary": "Retorna dados de uma ação",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"200": {"description": "Dados da ação com previsão ML"}, "404": {"description": "Ação não encontrada"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados da ação com previsão ML"
+          },
+          "404": {
+            "description": "Ação não encontrada"
+          }
+        }
       },
       "put": {
-        "tags": ["Stocks"],
+        "tags": [
+          "Stocks"
+        ],
         "summary": "Atualiza uma ação",
         "parameters": [
-          {"name": "ticker", "in": "path", "required": true, "type": "string"},
-          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
         ],
-        "responses": {"200": {"description": "Ação atualizada"}}
+        "responses": {
+          "200": {
+            "description": "Ação atualizada"
+          }
+        }
       },
       "delete": {
-        "tags": ["Stocks"],
+        "tags": [
+          "Stocks"
+        ],
         "summary": "Remove uma ação",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"200": {"description": "Ação removida"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ação removida"
+          }
+        }
       }
     },
     "/stocks/update-stocks": {
       "put": {
-        "tags": ["Stocks"],
+        "tags": [
+          "Stocks"
+        ],
         "summary": "Sincroniza ações do StatusInvest (somente ADMIN)",
-        "responses": {"200": {"description": "Ações atualizadas"}}
+        "responses": {
+          "200": {
+            "description": "Ações atualizadas"
+          }
+        }
       }
     },
     "/stocks/predictions": {
       "get": {
-        "tags": ["Predictions"],
+        "tags": [
+          "Predictions"
+        ],
         "summary": "Lista as últimas previsões ML de todas as ações",
-        "responses": {"200": {"description": "Lista de previsões"}}
+        "responses": {
+          "200": {
+            "description": "Lista de previsões"
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "type": "integer",
+            "default": 200
+          }
+        ]
       }
     },
     "/stocks/{ticker}/prediction": {
       "get": {
-        "tags": ["Predictions"],
+        "tags": [
+          "Predictions"
+        ],
         "summary": "Retorna a previsão ML de uma ação específica",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"200": {"description": "Previsão ML"}, "404": {"description": "Previsão não encontrada"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Previsão ML"
+          },
+          "404": {
+            "description": "Previsão não encontrada"
+          }
+        }
       }
     },
     "/fiis": {
       "get": {
-        "tags": ["FIIs"],
+        "tags": [
+          "FIIs"
+        ],
         "summary": "Lista todos os FIIs",
         "parameters": [
-          {"name": "page", "in": "query", "type": "integer", "default": 1},
-          {"name": "per_page", "in": "query", "type": "integer", "default": 50},
-          {"name": "sort_by", "in": "query", "type": "string"},
-          {"name": "sort_dir", "in": "query", "type": "string", "enum": ["asc", "desc"]},
-          {"name": "filters", "in": "query", "type": "string"},
-          {"name": "search", "in": "query", "type": "string", "description": "Busca por ticker ou nome da empresa"}
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "type": "integer",
+            "default": 50
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "sort_dir",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string",
+            "description": "Busca por ticker ou nome da empresa"
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "EQUILIBRADO",
+              "RENDA",
+              "VALOR"
+            ],
+            "default": "EQUILIBRADO",
+            "description": "Perfil de pesos do score de FII. Define a nota devolvida em score_total e a ordenação quando sort_by=score_total."
+          }
         ],
-        "responses": {"200": {"description": "Lista de FIIs com paginação"}}
+        "responses": {
+          "200": {
+            "description": "Lista de FIIs com paginação"
+          }
+        }
       },
       "post": {
-        "tags": ["FIIs"],
+        "tags": [
+          "FIIs"
+        ],
         "summary": "Cria um novo FII",
-        "parameters": [{"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}],
-        "responses": {"201": {"description": "FII criado"}}
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "FII criado"
+          }
+        }
       }
     },
     "/fii/{ticker}": {
       "get": {
-        "tags": ["FIIs"],
+        "tags": [
+          "FIIs"
+        ],
         "summary": "Retorna dados de um FII",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"200": {"description": "Dados do FII"}, "404": {"description": "FII não encontrado"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados do FII"
+          },
+          "404": {
+            "description": "FII não encontrado"
+          }
+        }
       },
       "put": {
-        "tags": ["FIIs"],
+        "tags": [
+          "FIIs"
+        ],
         "summary": "Atualiza um FII",
         "parameters": [
-          {"name": "ticker", "in": "path", "required": true, "type": "string"},
-          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
         ],
-        "responses": {"200": {"description": "FII atualizado"}}
+        "responses": {
+          "200": {
+            "description": "FII atualizado"
+          }
+        }
       },
       "delete": {
-        "tags": ["FIIs"],
+        "tags": [
+          "FIIs"
+        ],
         "summary": "Remove um FII",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"200": {"description": "FII removido"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "FII removido"
+          }
+        }
       }
     },
     "/fiis/update-fiis": {
       "put": {
-        "tags": ["FIIs"],
+        "tags": [
+          "FIIs"
+        ],
         "summary": "Sincroniza FIIs do StatusInvest (somente ADMIN)",
-        "responses": {"200": {"description": "FIIs atualizados"}}
+        "responses": {
+          "200": {
+            "description": "FIIs atualizados"
+          }
+        }
       }
     },
     "/users": {
       "get": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Lista todos os usuários",
-        "responses": {"200": {"description": "Lista de usuários"}}
+        "responses": {
+          "200": {
+            "description": "Lista de usuários"
+          }
+        }
       },
       "post": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Cria um novo usuário",
         "security": [],
         "parameters": [
@@ -163,43 +472,113 @@
             "schema": {
               "type": "object",
               "properties": {
-                "user_name": {"type": "string"},
-                "name": {"type": "string"},
-                "email": {"type": "string"},
-                "password": {"type": "string"}
+                "user_name": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                }
               }
             }
           }
         ],
-        "responses": {"201": {"description": "Usuário criado"}}
+        "responses": {
+          "201": {
+            "description": "Usuário criado"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
       }
     },
     "/user/{user_id}": {
       "get": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Retorna dados de um usuário",
-        "parameters": [{"name": "user_id", "in": "path", "required": true, "type": "integer"}],
-        "responses": {"200": {"description": "Dados do usuário"}}
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados do usuário"
+          }
+        }
       },
       "put": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Atualiza um usuário",
         "parameters": [
-          {"name": "user_id", "in": "path", "required": true, "type": "integer"},
-          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
         ],
-        "responses": {"200": {"description": "Usuário atualizado"}}
+        "responses": {
+          "200": {
+            "description": "Usuário atualizado"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
       },
       "delete": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Remove um usuário",
-        "parameters": [{"name": "user_id", "in": "path", "required": true, "type": "integer"}],
-        "responses": {"200": {"description": "Usuário removido"}}
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuário removido"
+          }
+        }
       }
     },
     "/user/login": {
       "post": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Autenticação — retorna JWT token",
         "security": [],
         "parameters": [
@@ -210,26 +589,48 @@
             "schema": {
               "type": "object",
               "properties": {
-                "user_name": {"type": "string"},
-                "password": {"type": "string"}
+                "user_name": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                }
               }
             }
           }
         ],
         "responses": {
-          "200": {"description": "Login realizado, retorna access_token"},
-          "401": {"description": "Credenciais inválidas"}
+          "200": {
+            "description": "Login realizado, retorna access_token"
+          },
+          "401": {
+            "description": "Credenciais inválidas"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
         }
       }
     },
     "/favorites": {
       "get": {
-        "tags": ["Favorites"],
+        "tags": [
+          "Favorites"
+        ],
         "summary": "Lista ações favoritas do usuário autenticado",
-        "responses": {"200": {"description": "Lista de favoritas"}}
+        "responses": {
+          "200": {
+            "description": "Lista de favoritas"
+          }
+        }
       },
       "post": {
-        "tags": ["Favorites"],
+        "tags": [
+          "Favorites"
+        ],
         "summary": "Adiciona uma favorita (com preços-alvo)",
         "parameters": [
           {
@@ -239,49 +640,117 @@
             "schema": {
               "type": "object",
               "properties": {
-                "stock_ticker": {"type": "string"},
-                "ceiling_price": {"type": "number"},
-                "target_price": {"type": "number"}
+                "stock_ticker": {
+                  "type": "string"
+                },
+                "ceiling_price": {
+                  "type": "number"
+                },
+                "target_price": {
+                  "type": "number"
+                }
               }
             }
           }
         ],
-        "responses": {"201": {"description": "Favorita adicionada"}}
+        "responses": {
+          "201": {
+            "description": "Favorita adicionada"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
       }
     },
     "/favorites/alerts": {
       "get": {
-        "tags": ["Favorites"],
+        "tags": [
+          "Favorites"
+        ],
         "summary": "Lista favoritas com preço atual abaixo do teto ou alvo",
-        "responses": {"200": {"description": "Lista de alertas de preço ativos"}}
+        "responses": {
+          "200": {
+            "description": "Lista de alertas de preço ativos"
+          }
+        }
       }
     },
     "/favorites/{ticker}": {
       "post": {
-        "tags": ["Favorites"],
+        "tags": [
+          "Favorites"
+        ],
         "summary": "Adiciona favorita rapidamente por ticker",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"201": {"description": "Favorita adicionada"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Favorita adicionada"
+          }
+        }
       },
       "delete": {
-        "tags": ["Favorites"],
+        "tags": [
+          "Favorites"
+        ],
         "summary": "Remove favorita por ticker",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"200": {"description": "Favorita removida"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Favorita removida"
+          }
+        }
       }
     },
     "/favorite/{favorite_id}": {
       "get": {
-        "tags": ["Favorites"],
+        "tags": [
+          "Favorites"
+        ],
         "summary": "Retorna dados de uma favorita",
-        "parameters": [{"name": "favorite_id", "in": "path", "required": true, "type": "integer"}],
-        "responses": {"200": {"description": "Dados da favorita"}}
+        "parameters": [
+          {
+            "name": "favorite_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados da favorita"
+          }
+        }
       },
       "put": {
-        "tags": ["Favorites"],
+        "tags": [
+          "Favorites"
+        ],
         "summary": "Atualiza preços-alvo de uma favorita",
         "parameters": [
-          {"name": "favorite_id", "in": "path", "required": true, "type": "integer"},
+          {
+            "name": "favorite_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
           {
             "name": "body",
             "in": "body",
@@ -289,79 +758,219 @@
             "schema": {
               "type": "object",
               "properties": {
-                "ceiling_price": {"type": "number"},
-                "target_price": {"type": "number"}
+                "ceiling_price": {
+                  "type": "number"
+                },
+                "target_price": {
+                  "type": "number"
+                }
               }
             }
           }
         ],
-        "responses": {"200": {"description": "Favorita atualizada"}}
+        "responses": {
+          "200": {
+            "description": "Favorita atualizada"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
       },
       "delete": {
-        "tags": ["Favorites"],
+        "tags": [
+          "Favorites"
+        ],
         "summary": "Remove uma favorita por ID",
-        "parameters": [{"name": "favorite_id", "in": "path", "required": true, "type": "integer"}],
-        "responses": {"200": {"description": "Favorita removida"}}
+        "parameters": [
+          {
+            "name": "favorite_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Favorita removida"
+          }
+        }
       }
     },
     "/favorites/fii": {
       "get": {
-        "tags": ["FII Favorites"],
+        "tags": [
+          "FII Favorites"
+        ],
         "summary": "Lista FIIs favoritos do usuário autenticado",
-        "responses": {"200": {"description": "Lista de FIIs favoritos"}}
+        "responses": {
+          "200": {
+            "description": "Lista de FIIs favoritos"
+          }
+        }
       },
       "post": {
-        "tags": ["FII Favorites"],
+        "tags": [
+          "FII Favorites"
+        ],
         "summary": "Adiciona FII favorito (com preços-alvo)",
-        "parameters": [{"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}],
-        "responses": {"201": {"description": "FII favorito adicionado"}}
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "FII favorito adicionado"
+          }
+        }
       }
     },
     "/favorites/fii/{ticker}": {
       "post": {
-        "tags": ["FII Favorites"],
+        "tags": [
+          "FII Favorites"
+        ],
         "summary": "Adiciona FII favorito por ticker",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"201": {"description": "FII favorito adicionado"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "FII favorito adicionado"
+          }
+        }
       },
       "delete": {
-        "tags": ["FII Favorites"],
+        "tags": [
+          "FII Favorites"
+        ],
         "summary": "Remove FII favorito por ticker",
-        "parameters": [{"name": "ticker", "in": "path", "required": true, "type": "string"}],
-        "responses": {"200": {"description": "FII favorito removido"}}
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "FII favorito removido"
+          }
+        }
       }
     },
     "/favorite/fii/{favorite_id}": {
       "get": {
-        "tags": ["FII Favorites"],
+        "tags": [
+          "FII Favorites"
+        ],
         "summary": "Retorna um FII favorito por ID",
-        "parameters": [{"name": "favorite_id", "in": "path", "required": true, "type": "integer"}],
-        "responses": {"200": {"description": "Dados do FII favorito"}}
+        "parameters": [
+          {
+            "name": "favorite_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados do FII favorito"
+          }
+        }
       },
       "put": {
-        "tags": ["FII Favorites"],
+        "tags": [
+          "FII Favorites"
+        ],
         "summary": "Atualiza preços-alvo de um FII favorito",
         "parameters": [
-          {"name": "favorite_id", "in": "path", "required": true, "type": "integer"},
-          {"name": "body", "in": "body", "required": true, "schema": {"type": "object"}}
+          {
+            "name": "favorite_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
         ],
-        "responses": {"200": {"description": "FII favorito atualizado"}}
+        "responses": {
+          "200": {
+            "description": "FII favorito atualizado"
+          }
+        }
       },
       "delete": {
-        "tags": ["FII Favorites"],
+        "tags": [
+          "FII Favorites"
+        ],
         "summary": "Remove FII favorito por ID",
-        "parameters": [{"name": "favorite_id", "in": "path", "required": true, "type": "integer"}],
-        "responses": {"200": {"description": "FII favorito removido"}}
+        "parameters": [
+          {
+            "name": "favorite_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "FII favorito removido"
+          }
+        }
       }
     },
     "/portfolio": {
       "get": {
-        "tags": ["Portfolio"],
+        "tags": [
+          "Portfolio"
+        ],
         "summary": "Lista posições do portfólio com P&L calculado",
-        "responses": {"200": {"description": "Lista de posições enriquecidas com current_price, pnl, pnl_percent"}}
+        "responses": {
+          "200": {
+            "description": "Lista de posições enriquecidas com current_price, pnl, pnl_percent"
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "type": "integer",
+            "default": 200
+          }
+        ]
       },
       "post": {
-        "tags": ["Portfolio"],
+        "tags": [
+          "Portfolio"
+        ],
         "summary": "Adiciona uma posição ao portfólio",
         "parameters": [
           {
@@ -371,29 +980,58 @@
             "schema": {
               "type": "object",
               "properties": {
-                "ticker": {"type": "string"},
-                "quantity": {"type": "number"},
-                "average_price": {"type": "number"}
+                "ticker": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "average_price": {
+                  "type": "number"
+                }
               }
             }
           }
         ],
-        "responses": {"201": {"description": "Posição adicionada"}}
+        "responses": {
+          "201": {
+            "description": "Posição adicionada"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
       }
     },
     "/portfolio/summary": {
       "get": {
-        "tags": ["Portfolio"],
+        "tags": [
+          "Portfolio"
+        ],
         "summary": "Retorna resumo do portfólio (total investido, valor atual, P&L)",
-        "responses": {"200": {"description": "Resumo financeiro do portfólio"}}
+        "responses": {
+          "200": {
+            "description": "Resumo financeiro do portfólio"
+          }
+        }
       }
     },
     "/portfolio/{position_id}": {
       "put": {
-        "tags": ["Portfolio"],
+        "tags": [
+          "Portfolio"
+        ],
         "summary": "Atualiza uma posição",
         "parameters": [
-          {"name": "position_id", "in": "path", "required": true, "type": "integer"},
+          {
+            "name": "position_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
           {
             "name": "body",
             "in": "body",
@@ -401,32 +1039,96 @@
             "schema": {
               "type": "object",
               "properties": {
-                "quantity": {"type": "number"},
-                "average_price": {"type": "number"}
+                "quantity": {
+                  "type": "number"
+                },
+                "average_price": {
+                  "type": "number"
+                }
               }
             }
           }
         ],
-        "responses": {"200": {"description": "Posição atualizada"}}
+        "responses": {
+          "200": {
+            "description": "Posição atualizada"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
       },
       "delete": {
-        "tags": ["Portfolio"],
+        "tags": [
+          "Portfolio"
+        ],
         "summary": "Remove uma posição",
-        "parameters": [{"name": "position_id", "in": "path", "required": true, "type": "integer"}],
-        "responses": {"200": {"description": "Posição removida"}}
+        "parameters": [
+          {
+            "name": "position_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posição removida"
+          }
+        }
       }
     },
     "/user_layout/{layout}": {
       "get": {
-        "tags": ["User Layout"],
+        "tags": [
+          "User Layout"
+        ],
         "summary": "Recupera estado salvo de um layout de tabela",
-        "parameters": [{"name": "layout", "in": "path", "required": true, "type": "string"}],
-        "responses": {"200": {"description": "Estado JSON do layout"}}
+        "parameters": [
+          {
+            "name": "layout",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado JSON do layout"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "User Layout"
+        ],
+        "summary": "Remove o layout salvo de uma tabela",
+        "parameters": [
+          {
+            "name": "layout",
+            "in": "path",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Não encontrado"
+          }
+        }
       }
     },
     "/user_layout": {
       "post": {
-        "tags": ["User Layout"],
+        "tags": [
+          "User Layout"
+        ],
         "summary": "Salva estado de um layout de tabela",
         "parameters": [
           {
@@ -436,13 +1138,633 @@
             "schema": {
               "type": "object",
               "properties": {
-                "layout": {"type": "string"},
-                "estado": {"type": "string"}
+                "layout": {
+                  "type": "string"
+                },
+                "estado": {
+                  "type": "string"
+                }
               }
             }
           }
         ],
-        "responses": {"200": {"description": "Layout salvo"}}
+        "responses": {
+          "200": {
+            "description": "Layout salvo"
+          }
+        }
+      }
+    },
+    "/opportunities": {
+      "get": {
+        "tags": [
+          "Opportunities"
+        ],
+        "summary": "Ativos mais bem pontuados de um perfil, já filtrados pelos guard rails",
+        "description": "Devolve apenas empresas elegíveis, ordenadas pelo score de 5 pilares. Cada linha traz os motivos e os alertas por trás da nota. Classes de ação da mesma empresa são colapsadas na melhor pontuada.",
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "EQUILIBRADO",
+              "VALOR",
+              "DIVIDENDOS",
+              "QUALIDADE",
+              "CRESCIMENTO",
+              "RENDA"
+            ],
+            "default": "EQUILIBRADO",
+            "description": "Perfis de ação: EQUILIBRADO, VALOR, DIVIDENDOS, QUALIDADE, CRESCIMENTO. Perfis de FII: EQUILIBRADO, RENDA, VALOR."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "integer",
+            "default": 12
+          },
+          {
+            "name": "asset_type",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "ACAO",
+              "FII"
+            ],
+            "default": "ACAO",
+            "description": "FII troca a tabela, os pilares e os campos do card: fundo não tem Graham, ROE nem CAGR de lucro."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Perfil desconhecido"
+          }
+        }
+      }
+    },
+    "/opportunities/profiles": {
+      "get": {
+        "tags": [
+          "Opportunities"
+        ],
+        "summary": "Perfis disponíveis e os pesos de cada pilar",
+        "description": "O usuário escolhe um perfil; os pesos ficam explícitos, não editáveis. Com asset_type=FII devolve os perfis e pilares do fundo imobiliário.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        },
+        "parameters": [
+          {
+            "name": "asset_type",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "ACAO",
+              "FII"
+            ],
+            "default": "ACAO",
+            "description": "FII troca a tabela, os pilares e os campos do card: fundo não tem Graham, ROE nem CAGR de lucro."
+          }
+        ]
+      }
+    },
+    "/stock/{ticker}/score": {
+      "get": {
+        "tags": [
+          "Opportunities"
+        ],
+        "summary": "Score de uma ação, inclusive quando ela foi excluída",
+        "description": "Responde 'por que esta ação não está na lista?': empresas inelegíveis vêm com eligible=false e o motivo da exclusão.",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "type": "string",
+            "default": "EQUILIBRADO"
+          },
+          {
+            "name": "asset_type",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "ACAO",
+              "FII"
+            ],
+            "default": "ACAO",
+            "description": "FII troca a tabela, os pilares e os campos do card: fundo não tem Graham, ROE nem CAGR de lucro."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Não encontrado"
+          }
+        }
+      }
+    },
+    "/stock/{ticker}/historical-context": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Múltiplos de hoje contra a mediana da própria empresa",
+        "description": "Compara P/L, P/VP, EV/EBIT e DY com a mediana dos exercícios fechados do próprio ticker. Indicador com menos de 3 anos fechados é omitido — abaixo disso a mediana é ruído.",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "years",
+            "in": "query",
+            "type": "integer",
+            "default": 5
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Não encontrado"
+          }
+        }
+      }
+    },
+    "/stock/{ticker}/history": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Histórico semanal de preço",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "type": "integer",
+            "default": 90
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Não encontrado"
+          }
+        }
+      }
+    },
+    "/stocks/bulk": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Vários tickers de uma vez, para comparação",
+        "parameters": [
+          {
+            "name": "tickers",
+            "in": "query",
+            "type": "string",
+            "description": "Separados por vírgula: PETR4,VALE3"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Renova o token de acesso",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Refresh token inválido"
+          }
+        }
+      }
+    },
+    "/benchmarks": {
+      "get": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "CDI e IPCA acumulados em 12 meses (BCB)",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        }
+      }
+    },
+    "/news": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Manchetes financeiras recentes",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        }
+      }
+    },
+    "/transactions": {
+      "get": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Histórico de transações do usuário",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Registra uma transação de compra ou venda",
+        "responses": {
+          "201": {
+            "description": "Transação criada"
+          },
+          "400": {
+            "description": "Dados inválidos"
+          }
+        }
+      }
+    },
+    "/strategies": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Estratégias de screener salvas pelo usuário",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Salva uma estratégia de screener",
+        "responses": {
+          "201": {
+            "description": "Estratégia criada"
+          },
+          "400": {
+            "description": "Filtros inválidos"
+          }
+        }
+      }
+    },
+    "/strategy/{strategy_id}/backtest": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Backtest de uma estratégia salva contra o CDI",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "path",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "type": "string",
+            "description": "AAAA-MM-DD"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "403": {
+            "description": "Estratégia de outro usuário"
+          }
+        }
+      }
+    },
+    "/portfolio/projected-income": {
+      "get": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Renda mensal projetada da carteira",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        }
+      }
+    },
+    "/user/{user_id}/password": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Troca de senha",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/fii": {
+      "get": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Posições de FII da carteira",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "type": "integer",
+            "default": 200
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Adiciona posição de FII",
+        "responses": {
+          "201": {
+            "description": "Posição criada"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/fii/summary": {
+      "get": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Resumo consolidado das posições de FII",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          }
+        }
+      }
+    },
+    "/portfolio/fii/{position_id}": {
+      "put": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Edita posição de FII",
+        "parameters": [
+          {
+            "name": "position_id",
+            "in": "path",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Não encontrado"
+          },
+          "403": {
+            "description": "Recurso de outro usuário"
+          },
+          "400": {
+            "description": "Corpo inválido",
+            "schema": {
+              "$ref": "#/definitions/ValidationError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Remove posição de FII",
+        "parameters": [
+          {
+            "name": "position_id",
+            "in": "path",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Não encontrado"
+          },
+          "403": {
+            "description": "Recurso de outro usuário"
+          }
+        }
+      }
+    },
+    "/strategy/{strategy_id}": {
+      "delete": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Remove uma estratégia salva",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "path",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Não encontrado"
+          },
+          "403": {
+            "description": "Recurso de outro usuário"
+          }
+        }
+      }
+    },
+    "/transaction/{transaction_id}": {
+      "delete": {
+        "tags": [
+          "Portfolio"
+        ],
+        "summary": "Remove uma transação",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "404": {
+            "description": "Não encontrado"
+          },
+          "403": {
+            "description": "Recurso de outro usuário"
+          }
+        }
+      }
+    },
+    "/stocks/reconciliation": {
+      "get": {
+        "tags": [
+          "Stocks"
+        ],
+        "summary": "Confronta o fundamento da CVM com o do StatusInvest",
+        "description": "Rede de segurança de quem aposentou o scraper: compara LPA, VPA e ROE do exercício fechado entre as duas fontes e lista quem diverge acima de 10%. Busca o StatusInvest na hora, porque a tabela stocks já foi sobrescrita pelo valor auditado. Divergência não significa erro da CVM — significa que alguém precisa olhar. Somente ADMIN.",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "type": "integer",
+            "description": "Exercício a comparar; por padrão o último fechado"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relatório de divergências"
+          },
+          "409": {
+            "description": "Sem demonstrações da CVM para o ano pedido"
+          },
+          "502": {
+            "description": "StatusInvest indisponível"
+          }
+        }
+      }
+    },
+    "/opportunities/backtest": {
+      "get": {
+        "tags": [
+          "Opportunities"
+        ],
+        "summary": "Como o decil de topo do score se saiu em cada ano",
+        "description": "Pontua cada ano com os múltiplos DAQUELE ano — pontuar 2021 com o score de hoje seria look-ahead e daria um resultado espetacular e falso. Compara o decil de topo com a média igualmente ponderada do próprio universo. A resposta carrega as ressalvas em `caveats`, incluindo o viés de sobrevivência: quem quebrou e saiu da bolsa não está em lado nenhum da conta.",
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "type": "string",
+            "default": "EQUILIBRADO"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultado por ano, resumo e ressalvas"
+          },
+          "400": {
+            "description": "Perfil desconhecido"
+          },
+          "409": {
+            "description": "Sem histórico de múltiplos derivado"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ValidationError": {
+      "type": "object",
+      "description": "Erro de validação do corpo. Uma chave por campo recusado, com a lista de motivos; a chave `_body` indica corpo ausente ou que não é um objeto JSON.",
+      "properties": {
+        "errors": {
+          "type": "object",
+          "example": {
+            "quantity": [
+              "Not a valid number."
+            ],
+            "ticker": [
+              "Missing data for required field."
+            ]
+          }
+        }
       }
     }
   }

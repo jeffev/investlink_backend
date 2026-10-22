@@ -5,6 +5,7 @@ from flask import jsonify
 from config import db
 from models.fii import Fii
 from models.portfolio_fii import PortfolioFii
+from services.portfolio_services import MAX_PER_PAGE, _paginated
 from models.user import User
 
 
@@ -44,11 +45,12 @@ def _calculate_monthly_income(quantity, fii):
     return 0.0
 
 
-def list_portfolio_fii(user_id):
+def list_portfolio_fii(user_id, page=1, per_page=MAX_PER_PAGE):
     try:
-        positions = PortfolioFii.query.filter_by(user_id=user_id).all()
+        query = PortfolioFii.query.filter_by(user_id=user_id)
+        positions, pagination = _paginated(query, page, per_page)
         result = [_calculate_fii_pnl(p.to_json(), p.fii) for p in positions]
-        return jsonify(result), 200
+        return jsonify({"data": result, "pagination": pagination}), 200
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return jsonify({"message": "An error occurred, please try again later"}), 500

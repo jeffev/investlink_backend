@@ -16,11 +16,19 @@ from services.portfolio_fii_services import (
     list_portfolio_fii,
 )
 from services.projected_income_service import get_projected_income
+from schemas import load_payload
+from schemas.portfolio_schema import (
+    AddFiiPositionSchema,
+    AddPositionSchema,
+    EditPositionSchema,
+)
 
 
 def list_portfolio_json():
     user_id = get_jwt_identity()
-    return list_portfolio(user_id)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 200, type=int)
+    return list_portfolio(user_id, page, per_page)
 
 
 def portfolio_summary_json():
@@ -29,14 +37,18 @@ def portfolio_summary_json():
 
 
 def add_position_json():
-    user_id = get_jwt_identity()
-    position_data = request.get_json()
-    position_data["user_id"] = user_id
+    position_data, error = load_payload(AddPositionSchema())
+    if error:
+        return error
+    # O dono vem do token, nunca do corpo.
+    position_data["user_id"] = get_jwt_identity()
     return add_position(position_data)
 
 
 def edit_position_json(position_id):
-    position_data = request.get_json()
+    position_data, error = load_payload(EditPositionSchema())
+    if error:
+        return error
     return edit_position(position_id, position_data)
 
 
@@ -46,7 +58,9 @@ def delete_position_json(position_id):
 
 def list_portfolio_fii_json():
     user_id = get_jwt_identity()
-    return list_portfolio_fii(user_id)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 200, type=int)
+    return list_portfolio_fii(user_id, page, per_page)
 
 
 def portfolio_fii_summary_json():
@@ -55,14 +69,18 @@ def portfolio_fii_summary_json():
 
 
 def add_fii_position_json():
-    user_id = get_jwt_identity()
-    position_data = request.get_json()
-    position_data["user_id"] = user_id
+    # Schema próprio: a carteira de fundos usa `fii_ticker`, não `ticker`.
+    position_data, error = load_payload(AddFiiPositionSchema())
+    if error:
+        return error
+    position_data["user_id"] = get_jwt_identity()
     return add_fii_position(position_data)
 
 
 def edit_fii_position_json(position_id):
-    position_data = request.get_json()
+    position_data, error = load_payload(EditPositionSchema())
+    if error:
+        return error
     return edit_fii_position(position_id, position_data)
 
 

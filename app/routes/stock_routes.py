@@ -12,6 +12,11 @@ from services.stock_services import (
     update_all_stocks,
 )
 from services.stock_history_service import get_stock_price_history
+from services.reconciliation_service import reconcile_fundamentals
+from services.historical_context_service import (
+    DEFAULT_YEARS,
+    get_historical_context,
+)
 
 
 def list_stocks_json():
@@ -23,7 +28,10 @@ def list_stocks_json():
     filters_raw = request.args.get("filters", None)
     filters = json.loads(filters_raw) if filters_raw else None
     search = request.args.get("search", None)
-    return list_stocks(user_id, page, per_page, sort_by, sort_dir, filters, search)
+    profile = request.args.get("profile", None)
+    return list_stocks(
+        user_id, page, per_page, sort_by, sort_dir, filters, search, profile
+    )
 
 
 def view_stock_json(ticker):
@@ -57,3 +65,13 @@ def bulk_view_stocks_json():
     tickers_raw = request.args.get("tickers", "")
     tickers = [t.strip().upper() for t in tickers_raw.split(",") if t.strip()]
     return bulk_view_stocks(tickers)
+
+
+def reconcile_fundamentals_json():
+    year = request.args.get("year", None, type=int)
+    return reconcile_fundamentals(year)
+
+
+def get_historical_context_json(ticker):
+    years = request.args.get("years", DEFAULT_YEARS, type=int)
+    return get_historical_context(ticker.upper(), years)

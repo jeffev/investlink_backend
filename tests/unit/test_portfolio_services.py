@@ -29,14 +29,17 @@ class TestPortfolioServices:
             with patch(
                 "services.portfolio_services.Portfolio.query"
             ) as mock_portfolio_query:
-                mock_portfolio_query.filter_by.return_value.all.return_value = [
+                # A listagem agora pagina: conta e recorta em vez de .all().
+                paged = mock_portfolio_query.filter_by.return_value
+                paged.count.return_value = 1
+                paged.offset.return_value.limit.return_value.all.return_value = [
                     mock_position
                 ]
 
                 result, status_code = list_portfolio(1)
 
                 assert status_code == 200
-                result_data = result.get_json()
+                result_data = result.get_json()["data"]
                 assert len(result_data) == 1
                 assert result_data[0]["ticker"] == "PETR4"
 
@@ -45,13 +48,16 @@ class TestPortfolioServices:
             with patch(
                 "services.portfolio_services.Portfolio.query"
             ) as mock_portfolio_query:
-                mock_portfolio_query.filter_by.return_value.all.return_value = []
+                paged = mock_portfolio_query.filter_by.return_value
+                paged.count.return_value = 0
+                paged.offset.return_value.limit.return_value.all.return_value = []
 
                 result, status_code = list_portfolio(1)
 
                 assert status_code == 200
                 result_data = result.get_json()
-                assert result_data == []
+                assert result_data["data"] == []
+                assert result_data["pagination"]["total"] == 0
 
     def test_add_position_success(self, app):
         with app.app_context():

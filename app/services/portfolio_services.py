@@ -46,9 +46,29 @@ def _calculate_pnl(position_json, current_price):
     }
 
 
+# Kept in step with favorites, which was paginated in Sprint C: same envelope,
+# same query parameters, so a caller does not have to learn two shapes.
+MAX_PER_PAGE = 200
+
+
+def _paginated(query, page, per_page):
+    """Returns (items, pagination envelope) for one page of a query."""
+    per_page = max(1, min(per_page, MAX_PER_PAGE))
+    page = max(1, page)
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+    return items, {
+        "total": total,
+        "current_page": page,
+        "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page,
+    }
+
+
 @handle_db_errors
-def list_portfolio(user_id):
-    positions = Portfolio.query.filter_by(user_id=user_id).all()
+def list_portfolio(user_id, page=1, per_page=MAX_PER_PAGE):
+    query = Portfolio.query.filter_by(user_id=user_id)
+    positions, pagination = _paginated(query, page, per_page)
     result = []
     for position in positions:
         stock = position.stock
@@ -57,7 +77,7 @@ def list_portfolio(user_id):
         enriched["companyname"] = stock.companyname if stock else None
         enriched["sectorname"] = stock.sectorname if stock else None
         result.append(enriched)
-    return jsonify(result), 200
+    return jsonify({"data": result, "pagination": pagination}), 200
 
 
 @handle_db_errors

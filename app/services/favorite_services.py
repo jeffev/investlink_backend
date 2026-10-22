@@ -125,7 +125,17 @@ def new_favorite(favorite_data):
     if existing_favorite:
         return jsonify({"message": "This stock is already favorited by this user"}), 400
 
-    db.session.add(Favorite(**favorite_data))
+    # Campo a campo, e não `Favorite(**favorite_data)`: com o desempacotamento
+    # qualquer chave do corpo virava coluna, e o `user_id` recebido nunca foi
+    # comparado com o de quem pediu — dava para criar favorita na conta alheia.
+    db.session.add(
+        Favorite(
+            user_id=user_id,
+            stock_ticker=stock_ticker,
+            ceiling_price=favorite_data.get("ceiling_price"),
+            target_price=favorite_data.get("target_price"),
+        )
+    )
     db.session.commit()
     return jsonify({"message": "Favorite added successfully"}), 201
 

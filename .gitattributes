@@ -1,0 +1,4 @@
+# core.autocrlf=true nesta máquina: sem isto o checkout no Windows entrega
+# scripts com CRLF, e um entrypoint com CRLF quebra o contêiner Linux com
+# "bad interpreter".
+*.sh text eol=lf

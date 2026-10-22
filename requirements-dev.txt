@@ -1,0 +1,10 @@
+# Dependências só de desenvolvimento e CI — não entram na imagem de produção.
+#
+# O `testcontainers` sobe um Postgres descartável por execução: é o que permite
+# testar o que o SQLite dos testes unitários não sabe reproduzir — ordenação
+# com NULLS LAST, ON CONFLICT, e a cadeia de migrações do Alembic.
+-r requirements.txt
+
+testcontainers[postgres]==4.15.0
+black
+flake8

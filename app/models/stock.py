@@ -33,6 +33,11 @@ class Stock(db.Model):
     liquidezcorrente = db.Column(db.Float)
     peg_ratio = db.Column(db.Float)
     receitas_cagr5 = db.Column(db.Float)
+    # Both arrive in every StatusInvest payload and had nowhere to land.
+    # Traded liquidity is what tells an opportunity apart from a listing
+    # the investor could not actually get out of.
+    lucros_cagr5 = db.Column(db.Float)
+    liquidezmediadiaria = db.Column(db.Float)
     vpa = db.Column(db.Float)
     lpa = db.Column(db.Float)
     valormercado = db.Column(db.Float)
@@ -47,6 +52,17 @@ class Stock(db.Model):
     roic_rank = db.Column(db.Integer)
     ey_rank = db.Column(db.Integer)
     magic_formula_rank = db.Column(db.Integer)
+
+    # Where the accounting figures above came from, and how recent they are.
+    # CVM means audited trailing twelve months; STATUSINVEST means the last
+    # closed fiscal year as a third party reported it.
+    fundamentals_source = db.Column(db.String(20))
+    fundamentals_date = db.Column(db.Date)
+
+    # A ticker the source stopped returning is delisted, not unchanged. Marked
+    # rather than deleted: a user may still hold it in their portfolio.
+    active = db.Column(db.Boolean, nullable=False, default=True)
+    delisted_at = db.Column(db.Date)
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -64,27 +80,36 @@ class Stock(db.Model):
 
     def get_discount_to_graham(self):
         """
-        Calculate the percentage discount to the Graham Formula:
-        Discount = ((Market Value - Graham Formula) / Market Value) * 100
+        Calculate the percentage premium over the Graham Formula:
+        ((Price - Graham Formula) / Price) * 100
+
+        Negative means the price sits below the Graham value (cheap);
+        positive means it trades at a premium.
+
+        Returns None whenever the Graham value does not apply — see
+        get_graham_formula. Returning 0.0 there would make a loss-making
+        company indistinguishable from one priced exactly at fair value.
         """
         graham_formula_value = self.get_graham_formula()
-        discount = (
-            ((self.price - graham_formula_value) / self.price) * 100
-            if self.price and graham_formula_value
-            else 0.0
-        )
+        if not self.price or not graham_formula_value:
+            return None
+        discount = ((self.price - graham_formula_value) / self.price) * 100
         return round(discount, 2)
 
     def get_graham_formula(self):
         """
         Calculate the Graham Formula: Intrinsic Value = √ (22.5 x LPA x VPA).
         LPA is Earnings Per Share and VPA is Book Value Per Share.
+
+        Returns None when the formula does not apply: a company with no data,
+        with a loss (negative LPA) or with negative equity (negative VPA) has
+        no meaningful Graham value.
         """
-        if self.lpa and self.vpa and self.lpa >= 0 and self.vpa >= 0:
-            formula = math.sqrt(22.5 * self.lpa * self.vpa)
-            return round(formula, 2)
-        else:
-            return 0.0
+        if self.lpa is None or self.vpa is None:
+            return None
+        if self.lpa < 0 or self.vpa < 0:
+            return None
+        return round(math.sqrt(22.5 * self.lpa * self.vpa), 2)
 
     def to_json(self):
         return {
@@ -115,6 +140,8 @@ class Stock(db.Model):
             "liquidezcorrente": self.liquidezcorrente,
             "peg_ratio": self.peg_ratio,
             "receitas_cagr5": self.receitas_cagr5,
+            "lucros_cagr5": self.lucros_cagr5,
+            "liquidezmediadiaria": self.liquidezmediadiaria,
             "vpa": self.vpa,
             "lpa": self.lpa,
             "valormercado": self.valormercado,
@@ -129,4 +156,10 @@ class Stock(db.Model):
             "roic_rank": self.roic_rank,
             "ey_rank": self.ey_rank,
             "magic_formula_rank": self.magic_formula_rank,
+            "active": self.active,
+            "delisted_at": (self.delisted_at.isoformat() if self.delisted_at else None),
+            "fundamentals_source": self.fundamentals_source,
+            "fundamentals_date": (
+                self.fundamentals_date.isoformat() if self.fundamentals_date else None
+            ),
         }

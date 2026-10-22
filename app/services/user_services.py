@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 expires = timedelta(hours=3)
 
+# Cadastro público nunca escolhe o próprio perfil.
+DEFAULT_PROFILE = "USER"
+
 
 def list_users():
     try:
@@ -54,14 +57,23 @@ def new_user(user_data):
         if existing_email:
             return jsonify({"message": "Email already in use"}), 400
 
-        password = user_data.pop("password")
         hashed_password = bcrypt.hashpw(
-            password.encode("utf-8"), bcrypt.gensalt()
+            user_data["password"].encode("utf-8"), bcrypt.gensalt()
         ).decode("utf-8")
 
-        user_data["password"] = hashed_password
-
-        new_user = User(**user_data)
+        # Campo a campo, e não `User(**user_data)`: com o desempacotamento,
+        # todo campo do corpo virava coluna, e como o cadastro é público
+        # bastava enviar "profile": "ADMIN" para sair com o perfil que libera
+        # as rotas de administração. O schema já descarta o campo; isto
+        # garante que ele continue descartado se alguém chamar o serviço
+        # direto.
+        new_user = User(
+            user_name=user_data["user_name"],
+            name=user_data["name"],
+            email=user_data["email"],
+            password=hashed_password,
+            profile=DEFAULT_PROFILE,
+        )
         db.session.add(new_user)
         db.session.commit()
 

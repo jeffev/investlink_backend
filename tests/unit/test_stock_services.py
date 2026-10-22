@@ -47,13 +47,23 @@ class TestStockServices:
                     "services.stock_services.attach_ml_fields",
                     side_effect=lambda s, p: s,
                 ) as _,
+                patch("services.stock_services.db") as mock_db,
+                patch("services.stock_services.get_score_map", return_value={}),
             ):
 
-                mock_stock_query.paginate.return_value = mock_paginated
+                # A listagem filtra os ativos e faz outer join com
+                # stock_scores para poder ordenar pelo score, então a paginação
+                # sai da query já filtrada e unida.
+                mock_stock_query.filter.return_value.outerjoin.return_value.paginate.return_value = (  # noqa: E501
+                    mock_paginated
+                )
                 mock_favorite_query.filter_by.return_value.all.return_value = [
                     mock_favorite
                 ]
                 mock_pm.return_value = {}
+                mock_db.session.query.return_value.filter.return_value.group_by.return_value.all.return_value = (
+                    []
+                )
 
                 result, status_code = list_stocks(sample_user.id)
 
@@ -78,9 +88,12 @@ class TestStockServices:
                 patch("services.stock_services.Stock.query") as mock_stock_query,
                 patch("services.stock_services.Favorite.query") as mock_favorite_query,
                 patch("services.stock_services.get_latest_predictions_map") as mock_pm,
+                patch("services.stock_services.get_score_map", return_value={}),
             ):
 
-                mock_stock_query.paginate.return_value = mock_paginated
+                mock_stock_query.filter.return_value.outerjoin.return_value.paginate.return_value = (  # noqa: E501
+                    mock_paginated
+                )
                 mock_favorite_query.filter_by.return_value.all.return_value = []
                 mock_pm.return_value = {}
 
@@ -359,8 +372,9 @@ class TestStockServices:
                 result_data = result.get_json()
                 assert "An error occurred" in result_data["message"]
 
-    @patch("services.stock_services.requests.get")
-    def test_get_all_stocks_from_statusinvest_success(self, mock_get):
+    @patch("services.stock_services.cloudscraper.create_scraper")
+    def test_get_all_stocks_from_statusinvest_success(self, mock_create_scraper):
+        mock_get = mock_create_scraper.return_value.get
         """Test successful retrieval of stocks from StatusInvest"""
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -386,8 +400,9 @@ class TestStockServices:
         assert len(result["list"]) == 1
         assert result["list"][0]["ticker"] == "PETR4"
 
-    @patch("services.stock_services.requests.get")
-    def test_get_all_stocks_from_statusinvest_http_error(self, mock_get):
+    @patch("services.stock_services.cloudscraper.create_scraper")
+    def test_get_all_stocks_from_statusinvest_http_error(self, mock_create_scraper):
+        mock_get = mock_create_scraper.return_value.get
         """Test retrieval of stocks when HTTP error occurs"""
         mock_response = MagicMock()
         mock_response.status_code = 500
@@ -397,8 +412,9 @@ class TestStockServices:
 
         assert result is None
 
-    @patch("services.stock_services.requests.get")
-    def test_get_all_stocks_from_statusinvest_exception(self, mock_get):
+    @patch("services.stock_services.cloudscraper.create_scraper")
+    def test_get_all_stocks_from_statusinvest_exception(self, mock_create_scraper):
+        mock_get = mock_create_scraper.return_value.get
         """Test retrieval of stocks when an exception occurs"""
         mock_get.side_effect = Exception("Network error")
 
@@ -499,3 +515,60 @@ class TestStockServices:
                 assert status_code == 500
                 result_data = result.get_json()
                 assert "An error occurred" in result_data["message"]
+
+
+class TestMarkDelisted:
+    """
+    E6 — o ticker que some da fonte é deslistado, não inalterado.
+    Confirmado na prática: 618 linhas em stocks contra 617 no payload (TRAD3).
+    """
+
+    def _stock(self, ticker, active=True, delisted_at=None):
+        stock = MagicMock(spec=Stock)
+        stock.ticker = ticker
+        stock.active = active
+        stock.delisted_at = delisted_at
+        return stock
+
+    def _run(self, returned, absent=(), revived=()):
+        from services.stock_services import mark_delisted
+
+        with patch("services.stock_services.Stock.query") as mock_query:
+            mock_query.filter.return_value.all.side_effect = [
+                list(absent),
+                list(revived),
+            ]
+            return mark_delisted(returned)
+
+    def test_a_ticker_that_vanished_is_marked(self, app):
+        with app.app_context():
+            ausente = self._stock("TRAD3")
+
+            assert self._run({"PETR4"}, absent=[ausente]) == 1
+
+            assert ausente.active is False
+            assert ausente.delisted_at is not None
+
+    def test_a_ticker_that_came_back_is_reactivated(self, app):
+        # Reaparecer sem reativar deixaria o papel contraditando o preço
+        # fresco ao lado dele.
+        with app.app_context():
+            voltou = self._stock("AAAA3", active=False, delisted_at="2026-01-01")
+
+            self._run({"AAAA3"}, revived=[voltou])
+
+            assert voltou.active is True
+            assert voltou.delisted_at is None
+
+    def test_an_already_delisted_ticker_keeps_its_original_date(self, app):
+        with app.app_context():
+            antigo = self._stock("TRAD3", active=False, delisted_at="2026-01-01")
+
+            self._run({"PETR4"}, absent=[antigo])
+
+            assert antigo.delisted_at == "2026-01-01"
+
+    def test_an_empty_payload_delists_nobody(self, app):
+        # Payload vazio é falha de busca, não mercado que fechou.
+        with app.app_context():
+            assert self._run(set()) == 0

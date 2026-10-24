@@ -36,6 +36,11 @@ class Fii(db.Model):
     cap_rate = db.Column(db.Float)
     vacancia_media = db.Column(db.Float)
 
+    # Onde a cota está no próprio ciclo, no mesmo vocabulário das ações.
+    queda_12m = db.Column(db.Float)
+    cycle_state = db.Column(db.String(30))
+    cycle_message = db.Column(db.String(255))
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -75,6 +80,9 @@ class Fii(db.Model):
             "qtd_imoveis": self.qtd_imoveis,
             "cap_rate": self.cap_rate,
             "vacancia_media": self.vacancia_media,
+            "queda_12m": self.queda_12m,
+            "cycle_state": self.cycle_state,
+            "cycle_message": self.cycle_message,
         }
 
 

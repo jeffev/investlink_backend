@@ -31,6 +31,12 @@ from models.cvm_fundamentals_ltm import CvmFinancials, TickerCvmMap
 from models.stock import Stock
 from models.stock_score import StockScore
 from services.cvm_fundamentals_service import SOURCE_CVM, ticker_root
+from services.cycle_service import (
+    DETERIORACAO,
+    OPORTUNIDADE,
+    TOPO,
+    attach_cycle_signals,
+)
 
 # Each metric is (stock attribute, lower_is_better).
 PILLAR_METRICS = {
@@ -39,45 +45,56 @@ PILLAR_METRICS = {
     "saude": [("dividaliquidaebit", True), ("liquidezcorrente", False)],
     "crescimento": [("receitas_cagr5", False), ("lucros_cagr5", False)],
     "dividendos": [("dy", False)],
+    # Onde o papel está no próprio ciclo. `queda_pontuavel` é a queda do topo
+    # de 12 meses — e só chega aqui preenchida quando o fundamento resistiu à
+    # queda; sem esse filtro, o pilar premiaria exatamente quem está
+    # afundando. `valuation_vs_historico` é o múltiplo de hoje contra a
+    # mediana da própria empresa.
+    "ciclo": [("preco_sobre_topo", True), ("valuation_vs_historico", True)],
 }
 
 # Profiles are weight sets, not different formulas. The investor picks a
 # profile; nobody should be asked to pick weights.
 PROFILES = {
     "EQUILIBRADO": {
-        "valuation": 0.30,
-        "qualidade": 0.25,
+        "valuation": 0.25,
+        "qualidade": 0.20,
         "saude": 0.15,
-        "crescimento": 0.15,
-        "dividendos": 0.15,
+        "crescimento": 0.10,
+        "dividendos": 0.10,
+        "ciclo": 0.20,
     },
     "VALOR": {
-        "valuation": 0.45,
-        "qualidade": 0.20,
-        "saude": 0.20,
+        "valuation": 0.35,
+        "qualidade": 0.15,
+        "saude": 0.15,
         "crescimento": 0.05,
-        "dividendos": 0.10,
+        "dividendos": 0.05,
+        "ciclo": 0.25,
     },
     "DIVIDENDOS": {
-        "valuation": 0.20,
-        "qualidade": 0.20,
+        "valuation": 0.15,
+        "qualidade": 0.15,
         "saude": 0.20,
         "crescimento": 0.05,
-        "dividendos": 0.35,
+        "dividendos": 0.30,
+        "ciclo": 0.15,
     },
     "QUALIDADE": {
-        "valuation": 0.20,
-        "qualidade": 0.40,
+        "valuation": 0.15,
+        "qualidade": 0.35,
         "saude": 0.20,
-        "crescimento": 0.15,
+        "crescimento": 0.10,
         "dividendos": 0.05,
+        "ciclo": 0.15,
     },
     "CRESCIMENTO": {
-        "valuation": 0.20,
-        "qualidade": 0.25,
-        "saude": 0.15,
-        "crescimento": 0.35,
+        "valuation": 0.15,
+        "qualidade": 0.20,
+        "saude": 0.10,
+        "crescimento": 0.30,
         "dividendos": 0.05,
+        "ciclo": 0.20,
     },
 }
 
@@ -121,20 +138,66 @@ def _entry(code, message):
     return {"code": code, "message": message}
 
 
+# Múltiplo de preço: preço sobre alguma medida de resultado ou patrimônio.
+# Quando a medida é negativa, o múltiplo não fica "barato" — ele deixa de
+# significar o que o nome diz.
+PRICE_MULTIPLES = {
+    "p_l",
+    "p_vp",
+    "ev_ebit",
+    "p_ebit",
+    "p_ativo",
+    "p_sr",
+    "p_capitalgiro",
+    "p_ativocirculante",
+    "peg_ratio",
+}
+
+
 def scoring_value(stock, attribute):
     """
-    The value a metric contributes to its pillar, which is not always the
-    reported one.
+    O valor que a métrica leva para o pilar, que nem sempre é o publicado.
 
-    A 34% dividend yield is flagged as non-recurring three lines below and was
-    still being rewarded as if it were four times better than a solid 8%. Above
-    the plausibility threshold the yield is capped, so an extraordinary payout
-    ranks with the best sustainable ones instead of above them.
+    Um DY de 34% é sinalizado como não recorrente três linhas abaixo e mesmo
+    assim era premiado como se fosse quatro vezes melhor que um sólido 8%.
+    Acima do limiar de plausibilidade o yield é aparado.
+
+    **Múltiplo negativo não é múltiplo barato.** P/L de −4,50 quer dizer
+    prejuízo; EV/EBIT negativo quer dizer resultado operacional negativo; P/VP
+    negativo quer dizer patrimônio líquido negativo. O percentil ordena do
+    menor para o maior, então o negativo era classificado como o mais barato
+    do setor — a AZTE3 chegou a **segundo lugar geral** com P/L −4,50 e
+    EV/EBIT −6,97, tirando 86 no pilar de valuation.
+
+    Fora do ranking daquela métrica, a empresa é ranqueada pelo que de fato se
+    aplica a ela, e o alerta de prejuízo continua no card contando o resto.
     """
     value = getattr(stock, attribute, None)
     if attribute == "dy" and _is_usable(value):
         return min(value, IMPLAUSIBLE_DIVIDEND_YIELD)
+    if attribute in PRICE_MULTIPLES and value is not None and value <= 0:
+        return None
+    if attribute == "dividaliquidaebit":
+        return _leverage_value(stock, value)
     return value
+
+
+def _leverage_value(stock, value):
+    """
+    Dívida líquida sobre EBIT, quando o número quer dizer alguma coisa.
+
+    Negativo tem duas leituras opostas: caixa líquido com EBIT positivo (ótimo)
+    ou EBIT negativo com dívida (péssimo). A razão não distingue as duas, e
+    como menor é melhor, as duas eram premiadas igualmente — 25 das 126 ações
+    elegíveis caem nesse caso.
+
+    A margem EBIT dá o sinal do denominador. Com EBIT não positivo, a razão
+    sai do ranking e a empresa é avaliada pelo resto.
+    """
+    if value is None or value >= 0:
+        return value
+    margem_ebit = getattr(stock, "margemebit", None)
+    return value if (margem_ebit or 0) > 0 else None
 
 
 def _is_usable(value):
@@ -244,7 +307,24 @@ def check_eligibility(stock, profitable_years):
             )
         )
 
-    leverage = stock.dividaliquidaebit
+    # Dívida com resultado operacional negativo produz razão negativa, que o
+    # limite de alavancagem lia como caixa líquido e deixava passar livre.
+    margem_ebit = getattr(stock, "margemebit", None)
+    if (
+        _is_usable(getattr(stock, "dividaliquidaebit", None))
+        and stock.dividaliquidaebit < 0
+        and _is_usable(margem_ebit)
+        and margem_ebit < 0
+    ):
+        reasons.append(
+            _entry(
+                "ALAVANCAGEM_SEM_EBIT",
+                "Dívida líquida com resultado operacional negativo — a relação "
+                "com o EBIT não mede endividamento aqui",
+            )
+        )
+
+    leverage = _leverage_value(stock, stock.dividaliquidaebit)
     if _is_usable(leverage) and leverage > MAX_NET_DEBT_TO_EBIT:
         reasons.append(
             _entry(
@@ -311,11 +391,15 @@ def compute_metric_percentiles(stocks):
     for _, members in _group_by_sector(stocks):
         for metrics in PILLAR_METRICS.values():
             for attribute, lower_is_better in metrics:
-                values = {
-                    stock.ticker: scoring_value(stock, attribute)
-                    for stock in members
-                    if _is_usable(getattr(stock, attribute, None))
-                }
+                # Filtra pelo valor de pontuação, não pelo bruto: múltiplo
+                # negativo e alavancagem sem EBIT viram None, e comparar None
+                # com float na ordenação derruba o refresh inteiro. É o mesmo
+                # acerto que o score de FII já tinha recebido.
+                values = {}
+                for stock in members:
+                    value = scoring_value(stock, attribute)
+                    if _is_usable(value):
+                        values[stock.ticker] = value
                 for ticker, rank in percentile_ranks(values, lower_is_better).items():
                     percentiles[ticker][attribute] = rank
     return percentiles
@@ -381,6 +465,7 @@ def build_reasons(stock, pillars):
         "saude": "Balanço mais sólido que o do setor",
         "crescimento": "Crescimento acima da média do setor",
         "dividendos": "Dividendos acima da média do setor",
+        "ciclo": "Momento de entrada melhor que o do setor",
     }
     ranked = sorted(
         ((pillar, value) for pillar, value in pillars.items() if value is not None),
@@ -388,7 +473,11 @@ def build_reasons(stock, pillars):
         reverse=True,
     )
 
-    reasons = [
+    reasons = []
+    if getattr(stock, "cycle_state", None) == OPORTUNIDADE and stock.cycle_message:
+        reasons.append(_entry("CICLO_OPORTUNIDADE", stock.cycle_message))
+
+    reasons += [
         _entry(f"PILAR_{pillar.upper()}", f"{labels[pillar]} ({value:.0f}/100)")
         for pillar, value in ranked
         if value >= STRONG_PILLAR
@@ -417,12 +506,31 @@ def build_red_flags(stock):
     """
     flags = []
 
+    # Comprar no topo do próprio ciclo e cair junto com o lucro são os dois
+    # jeitos de errar que nenhum múltiplo isolado denuncia.
+    estado = getattr(stock, "cycle_state", None)
+    if estado in (TOPO, DETERIORACAO) and stock.cycle_message:
+        codigo = "CICLO_TOPO" if estado == TOPO else "CICLO_DETERIORACAO"
+        flags.append(_entry(codigo, stock.cycle_message))
+
     if stock.lpa is not None and stock.lpa < 0:
         flags.append(
             _entry("PREJUIZO", "Empresa com prejuízo — lucro por ação negativo")
         )
     if _is_usable(stock.margemliquida) and stock.margemliquida < WEAK_NET_MARGIN:
         flags.append(_entry("MARGEM_NEGATIVA", "Margem líquida negativa"))
+    margem_ebit = getattr(stock, "margemebit", None)
+    if _is_usable(margem_ebit) and margem_ebit < 0:
+        # Mostrado, não escondido: pode ser um ciclo ruim de uma boa empresa,
+        # e é o investidor que decide. O que não pode é o múltiplo negativo
+        # entrar no ranking como se fosse desconto.
+        flags.append(
+            _entry(
+                "EBIT_NEGATIVO",
+                f"Resultado operacional negativo (margem EBIT de "
+                f"{margem_ebit:.1f}%)",
+            )
+        )
     if (
         _is_usable(stock.dividaliquidaebit)
         and stock.dividaliquidaebit > NOTABLE_LEVERAGE
@@ -456,7 +564,8 @@ def build_red_flags(stock):
         flags.append(
             _entry(
                 "FUNDAMENTO_DEFASADO",
-                "Fundamento do último exercício fechado, não dos últimos 12 meses",
+                "Fundamento de fonte pública, do último exercício fechado — "
+                "não auditado nem dos últimos 12 meses",
             )
         )
 
@@ -466,19 +575,44 @@ def build_red_flags(stock):
 # ── Orquestração ─────────────────────────────────────────────────────────────
 
 
+def leading_pillars(profile):
+    """Os pilares que mais pesam no perfil — o que o perfil quer dizer."""
+    weights = PROFILES.get(profile) or PROFILES[DEFAULT_PROFILE]
+    maior = max(weights.values())
+    return {pillar for pillar, peso in weights.items() if peso == maior}
+
+
+def _ranks_in_profile(pillars, profile):
+    """
+    Sem o pilar que define o perfil, a ação não entra naquela vitrine.
+
+    `weighted_score` renormaliza os pesos quando um pilar falta — regra que
+    nasceu para o banco que não tem EBIT, onde o pilar ausente é fato
+    contábil. Aqui ela se volta contra o usuário: uma empresa sem dividendo
+    declarado teria os 30% do pilar de dividendos redistribuídos para os
+    outros e poderia liderar justamente o perfil DIVIDENDOS, ranqueada por
+    aquilo que o perfil não pediu.
+
+    É a mesma regra que o score de FII já aplicava; faltava valer para ação.
+    """
+    return all(pillars.get(pillar) is not None for pillar in leading_pillars(profile))
+
+
 def _score_row(stock, pillars, profile, exclusion_reasons, run_date):
     """Builds the persisted row for one ticker under one profile."""
     eligible = not exclusion_reasons
+    ranked = eligible and _ranks_in_profile(pillars, profile)
     return {
         "ticker": stock.ticker,
         "profile": profile,
         "run_date": run_date,
-        "score_total": weighted_score(pillars, profile) if eligible else None,
+        "score_total": weighted_score(pillars, profile) if ranked else None,
         "score_valuation": pillars.get("valuation"),
         "score_qualidade": pillars.get("qualidade"),
         "score_saude": pillars.get("saude"),
         "score_crescimento": pillars.get("crescimento"),
         "score_dividendos": pillars.get("dividendos"),
+        "score_ciclo": pillars.get("ciclo"),
         "eligible": eligible,
         "exclusion_reasons": json.dumps(exclusion_reasons, ensure_ascii=False),
         "reasons": json.dumps(build_reasons(stock, pillars), ensure_ascii=False),
@@ -494,6 +628,7 @@ def build_scores(stocks, profiles=None):
     never the ranking of a company against its peers.
     """
     profiles = profiles or list(PROFILES)
+    attach_cycle_signals(stocks)
     percentiles = compute_metric_percentiles(stocks)
     profitable_years = get_profitable_years([stock.ticker for stock in stocks])
     run_date = datetime.utcnow()

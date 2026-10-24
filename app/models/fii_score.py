@@ -31,6 +31,7 @@ class FiiScore(db.Model):
     score_renda = db.Column(db.Float)
     score_liquidez = db.Column(db.Float)
     score_estrutura = db.Column(db.Float)
+    score_ciclo = db.Column(db.Float)
 
     eligible = db.Column(db.Boolean, nullable=False, default=True)
     exclusion_reasons = db.Column(db.Text)
@@ -64,6 +65,11 @@ class FiiScore(db.Model):
                     "key": "estrutura",
                     "label": "Estrutura",
                     "value": self.score_estrutura,
+                },
+                {
+                    "key": "ciclo",
+                    "label": "Momento do ciclo",
+                    "value": self.score_ciclo,
                 },
             ],
             "eligible": self.eligible,

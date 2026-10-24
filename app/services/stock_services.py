@@ -1,6 +1,6 @@
 import logging
 import json
-from datetime import date
+from datetime import date, timedelta
 
 import cloudscraper
 from flask import jsonify
@@ -12,6 +12,7 @@ from config import db
 from services.prediction_service import get_latest_predictions_map, attach_ml_fields
 from services.cvm_fundamentals_service import enrich_with_cvm
 from models.stock_score import StockScore
+from services.fundamentus_stocks import get_all_stocks_from_fundamentus
 from services.scoring_service import (
     DEFAULT_PROFILE,
     PROFILES,
@@ -370,38 +371,57 @@ def get_all_stocks_from_statusinvest():
         return None
 
 
+DELISTING_GRACE_DAYS = 5
+
+
 def mark_delisted(returned_tickers):
     """
-    Flags every stock the source stopped returning.
+    Marca o papel que a fonte parou de devolver — depois de uma carência.
 
-    Marked, never deleted: a user can hold a delisted ticker in their portfolio,
-    and removing the row would take their position with it. Reappearing is
-    handled too — a ticker that comes back is reactivated rather than left
-    contradicting the fresh price beside it.
+    Marcado, nunca apagado: alguém pode ter o papel na carteira, e remover a
+    linha levaria a posição junto. Quem volta é reativado, para não ficar
+    inativo ao lado de um preço novo.
+
+    A carência existe porque ausência de um dia não é deslistagem. Quando a
+    coleta de ações trocou de fonte, 71 papéis sumiram da lista nova e foram
+    marcados de uma vez — **incluindo a B3SA3**, que é a própria bolsa. Agora
+    a ausência é anotada, e só vira deslistagem depois de cinco dias seguidos
+    fora da fonte.
     """
     if not returned_tickers:
-        # An empty payload is a failed fetch, not a market that closed.
+        # Resposta vazia é coleta que falhou, não pregão que fechou.
         return 0
 
-    today = date.today()
-    delisted = Stock.query.filter(Stock.ticker.notin_(returned_tickers)).all()
-    for stock in delisted:
-        if stock.active:
+    hoje = date.today()
+    limite = hoje - timedelta(days=DELISTING_GRACE_DAYS)
+
+    ausentes = Stock.query.filter(Stock.ticker.notin_(returned_tickers)).all()
+    recem_ausentes = 0
+    deslistados = 0
+    for stock in ausentes:
+        if stock.missing_since is None:
+            stock.missing_since = hoje
+            recem_ausentes += 1
+        elif stock.active and stock.missing_since <= limite:
             stock.active = False
-            stock.delisted_at = today
+            stock.delisted_at = hoje
+            deslistados += 1
 
-    revived = Stock.query.filter(
-        Stock.ticker.in_(returned_tickers), Stock.active.is_(False)
-    ).all()
-    for stock in revived:
-        stock.active = True
-        stock.delisted_at = None
+    presentes = Stock.query.filter(Stock.ticker.in_(returned_tickers)).all()
+    revividos = 0
+    for stock in presentes:
+        stock.missing_since = None
+        if not stock.active:
+            stock.active = True
+            stock.delisted_at = None
+            revividos += 1
 
-    if delisted or revived:
+    if recem_ausentes or deslistados or revividos:
         logging.info(
-            f"Delisting: {len(delisted)} inactive, {len(revived)} back on the exchange"
+            f"Deslistagem: {recem_ausentes} sumiram agora, "
+            f"{deslistados} passaram da carência, {revividos} voltaram"
         )
-    return len(delisted)
+    return deslistados
 
 
 def calculate_ey(stock_data):
@@ -413,10 +433,17 @@ def calculate_ey(stock_data):
 
 def update_all_stocks():
     try:
-        stocks_data = get_all_stocks_from_statusinvest()
+        # Fundamentus primeiro, StatusInvest como alternativa — a mesma ordem
+        # que o lado dos FIIs já usava. Na primeira execução da rotina
+        # automática o StatusInvest devolveu 403 e a coleta de ações estava
+        # parada havia semanas sem ninguém notar, porque nada rodava sozinho.
+        stocks_data = get_all_stocks_from_fundamentus()
+        if not stocks_data or "list" not in stocks_data:
+            logging.error("Fundamentus falhou, tentando StatusInvest...")
+            stocks_data = get_all_stocks_from_statusinvest()
         if not stocks_data or "list" not in stocks_data:
             return (
-                jsonify({"error": "Error fetching stock data from StatusInvest."}),
+                jsonify({"error": "Error fetching stock data."}),
                 500,
             )
 

@@ -61,6 +61,7 @@ from routes.favorite_fii_routes import (
 )
 from routes.auth_routes import refresh_token_json
 from routes.health_routes import health_json
+from routes.job_routes import last_refresh_json
 from routes.benchmark_routes import get_benchmarks_json
 from routes.transaction_routes import (
     list_transactions_json,
@@ -123,6 +124,13 @@ def protected_route(view_func, required_profile=None):
 def setup_routes(app):
     # Health route — fora do /v1 porque é infraestrutura, não API pública
     app.add_url_rule("/health", methods=["GET"], view_func=health_json)
+
+    # Última atualização automática — a tela mostra de quando é o dado.
+    app.add_url_rule(
+        "/v1/jobs/last-refresh",
+        methods=["GET"],
+        view_func=protected_route(last_refresh_json),
+    )
 
     # Auth routes
     app.add_url_rule("/v1/auth/refresh", methods=["POST"], view_func=refresh_token_json)

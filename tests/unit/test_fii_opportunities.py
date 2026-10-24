@@ -63,10 +63,13 @@ def _run_list(scores, fiis, profile=None, limit=12, asset_type="FII"):
     with (
         patch("services.opportunity_service.FiiScore.query") as mock_scores,
         patch("services.opportunity_service.Fii.query") as mock_fiis,
+        patch("services.opportunity_service.get_score_deltas", return_value={}),
     ):
         chain = MagicMock()
         chain.order_by.return_value.limit.return_value.all.return_value = scores
-        mock_scores.filter.return_value = chain
+        # A consulta faz join com a tabela do ativo para filtrar por preço,
+        # ciclo e carteira.
+        mock_scores.join.return_value.filter.return_value = chain
         mock_fiis.filter.return_value.all.return_value = fiis
         return list_opportunities(profile, limit, asset_type)
 
@@ -152,7 +155,7 @@ def test_sem_asset_type_a_vitrine_continua_sendo_a_de_acoes(app):
         ):
             chain = MagicMock()
             chain.order_by.return_value.limit.return_value.all.return_value = []
-            mock_scores.filter.return_value = chain
+            mock_scores.join.return_value.filter.return_value = chain
             mock_stocks.filter.return_value.all.return_value = []
 
             response, status = list_opportunities()
@@ -175,7 +178,13 @@ def test_os_pilares_de_fii_aparecem_nos_pesos_do_perfil(app):
         response, _ = list_profiles("FII")
         weights = response.get_json()["data"][0]["weights"]
 
-        assert sorted(weights) == ["estrutura", "liquidez", "renda", "valuation"]
+        assert sorted(weights) == [
+            "ciclo",
+            "estrutura",
+            "liquidez",
+            "renda",
+            "valuation",
+        ]
 
 
 def test_o_score_de_um_fundo_isolado(app):

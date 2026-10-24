@@ -55,10 +55,13 @@ def _run_list(scores, stocks, profile=None, limit=12):
     with (
         patch("services.opportunity_service.StockScore.query") as mock_scores,
         patch("services.opportunity_service.Stock.query") as mock_stocks,
+        patch("services.opportunity_service.get_score_deltas", return_value={}),
     ):
         chain = MagicMock()
         chain.order_by.return_value.limit.return_value.all.return_value = scores
-        mock_scores.filter.return_value = chain
+        # A consulta faz join com a tabela do ativo para filtrar por preço,
+        # ciclo e carteira.
+        mock_scores.join.return_value.filter.return_value = chain
         mock_stocks.filter.return_value.all.return_value = stocks
         return list_opportunities(profile, limit)
 

@@ -17,6 +17,7 @@ from models.stock_score import StockScore
 from services.cvm_fundamentals_service import ticker_root
 from services.fii_scoring_service import DEFAULT_FII_PROFILE, FII_PROFILES
 from services.scoring_service import DEFAULT_PROFILE, PROFILES
+from services.snapshot_service import attach_delta, get_score_deltas
 
 DEFAULT_LIMIT = 12
 MAX_LIMIT = 100
@@ -37,6 +38,11 @@ CARD_FIELDS = (
     "discount_to_graham",
     "fundamentals_source",
     "fundamentals_date",
+    # Onde o papel está no próprio ciclo — o que responde "é hora?" ao lado
+    # do score, que responde "é bom?".
+    "queda_12m",
+    "cycle_state",
+    "cycle_message",
 )
 
 # O card do FII mostra outra coisa: não há lucro por ação nem Graham, e o que
@@ -56,6 +62,9 @@ FII_CARD_FIELDS = (
     "liquidezmediadiaria",
     "patrimonio",
     "valorpatrimonialcota",
+    "queda_12m",
+    "cycle_state",
+    "cycle_message",
 )
 
 PROFILE_LABELS = {
@@ -72,6 +81,7 @@ PROFILE_LABELS = {
 # tabela, os pesos e os campos do card.
 ASSET_TYPES = {
     "ACAO": {
+        "key": "ACAO",
         "model": Stock,
         "score_model": StockScore,
         "profiles": PROFILES,
@@ -81,6 +91,7 @@ ASSET_TYPES = {
         "dedupe_share_classes": True,
     },
     "FII": {
+        "key": "FII",
         "model": Fii,
         "score_model": FiiScore,
         "profiles": FII_PROFILES,
@@ -134,7 +145,43 @@ def _resolve_profile(profile, asset):
     return normalized if normalized in asset["profiles"] else None
 
 
-def list_opportunities(profile=None, limit=DEFAULT_LIMIT, asset_type=None):
+CYCLE_OPPORTUNITY = "OPORTUNIDADE_DE_CICLO"
+
+
+def _apply_filters(consulta, model, filters):
+    """
+    Os filtros do investidor, aplicados no banco e não na tela.
+
+    Filtrar depois de receber a lista deixaria três cards de doze: o recorte
+    do servidor já é "os melhores", e peneirar o resultado não traz os
+    próximos da fila.
+
+    `max_price` existe porque quem separa R$ 500 por mês não compra cota de
+    R$ 1.200, e a melhor oportunidade que não cabe no bolso não é
+    oportunidade. `only_drawdown` atende quem não quer comprar no topo:
+    mostra só o que caiu com o fundamento de pé. `exclude_tickers` tira da
+    vitrine o que a pessoa já tem.
+    """
+    preco_max = filters.get("max_price")
+    if preco_max:
+        consulta = consulta.filter(model.price <= float(preco_max))
+
+    if filters.get("only_drawdown"):
+        consulta = consulta.filter(model.cycle_state == CYCLE_OPPORTUNITY)
+
+    excluir = filters.get("exclude_tickers")
+    if excluir:
+        consulta = consulta.filter(model.ticker.notin_(list(excluir)))
+
+    return consulta
+
+
+def list_opportunities(
+    profile=None,
+    limit=DEFAULT_LIMIT,
+    asset_type=None,
+    filters=None,
+):
     """Best-ranked eligible assets for a profile, highest score first."""
     try:
         asset = _resolve_asset_type(asset_type)
@@ -162,15 +209,21 @@ def list_opportunities(profile=None, limit=DEFAULT_LIMIT, asset_type=None):
             )
 
         score_model = asset["score_model"]
+        model = asset["model"]
         limit = max(1, min(limit, MAX_LIMIT))
         headroom = SHARE_CLASS_HEADROOM if asset["dedupe_share_classes"] else 1
+
+        consulta = score_model.query.join(
+            model, model.ticker == score_model.ticker
+        ).filter(
+            score_model.profile == resolved,
+            score_model.eligible.is_(True),
+            score_model.score_total.isnot(None),
+        )
+        consulta = _apply_filters(consulta, model, filters or {})
+
         ranked = (
-            score_model.query.filter(
-                score_model.profile == resolved,
-                score_model.eligible.is_(True),
-                score_model.score_total.isnot(None),
-            )
-            .order_by(score_model.score_total.desc())
+            consulta.order_by(score_model.score_total.desc())
             .limit(limit * headroom)
             .all()
         )
@@ -181,13 +234,17 @@ def list_opportunities(profile=None, limit=DEFAULT_LIMIT, asset_type=None):
             return jsonify({"profile": resolved, "data": []}), 200
 
         tickers = [score.ticker for score in scores]
-        model = asset["model"]
         assets = {
             item.ticker: item
             for item in model.query.filter(model.ticker.in_(tickers)).all()
         }
+        deltas = get_score_deltas(asset["key"], resolved, [s.ticker for s in scores])
         data = [
-            _card(assets[score.ticker], score, asset["card_fields"])
+            attach_delta(
+                _card(assets[score.ticker], score, asset["card_fields"]),
+                deltas.get(score.ticker),
+                score.score_total,
+            )
             for score in scores
             if score.ticker in assets
         ]

@@ -300,7 +300,11 @@ def test_an_implausible_yield_is_flagged_even_though_it_scores_well():
 def test_every_ticker_gets_a_row_for_every_profile(app):
     with app.app_context():
         stocks = [_stock(f"AAA{i}") for i in range(6)]
-        with patch("services.scoring_service.get_profitable_years") as mock_years:
+        with (
+            patch("services.scoring_service.get_profitable_years") as mock_years,
+            # O sinal de ciclo lê histórico de preço e de lucro no banco.
+            patch("services.scoring_service.attach_cycle_signals"),
+        ):
             mock_years.return_value = {"AAA0": 5}
 
             rows = build_scores(stocks)
@@ -311,7 +315,11 @@ def test_every_ticker_gets_a_row_for_every_profile(app):
 def test_an_ineligible_company_is_stored_with_its_reason(app):
     with app.app_context():
         stocks = [_stock("AAA1", liquidezmediadiaria=0)]
-        with patch("services.scoring_service.get_profitable_years") as mock_years:
+        with (
+            patch("services.scoring_service.get_profitable_years") as mock_years,
+            # O sinal de ciclo lê histórico de preço e de lucro no banco.
+            patch("services.scoring_service.attach_cycle_signals"),
+        ):
             mock_years.return_value = {}
 
             rows = build_scores(stocks, profiles=[DEFAULT_PROFILE])
@@ -385,3 +393,68 @@ def test_unknown_listing_status_does_not_exclude():
     assert "DESLISTADA" not in [
         reason["code"] for reason in check_eligibility(stock, {"PETR": 5})
     ]
+
+
+# ── O perfil precisa do pilar que o define ───────────────────────────────────
+
+
+def test_os_pilares_que_definem_cada_perfil():
+    from services.scoring_service import leading_pillars
+
+    assert leading_pillars("DIVIDENDOS") == {"dividendos"}
+    assert leading_pillars("QUALIDADE") == {"qualidade"}
+    assert leading_pillars("CRESCIMENTO") == {"crescimento"}
+    assert leading_pillars("VALOR") == {"valuation"}
+
+
+def test_sem_dividendo_declarado_a_acao_nao_entra_na_vitrine_de_dividendos():
+    # `weighted_score` renormaliza os pesos quando um pilar falta. Sem esta
+    # regra, uma empresa sem dividendo teria os 30% do pilar redistribuídos
+    # para os outros e poderia liderar justamente o perfil DIVIDENDOS.
+    from services.scoring_service import _ranks_in_profile
+
+    pilares = {
+        "valuation": 90.0,
+        "qualidade": 80.0,
+        "saude": 70.0,
+        "crescimento": 60.0,
+        "dividendos": None,
+        "ciclo": 95.0,
+    }
+
+    assert _ranks_in_profile(pilares, "DIVIDENDOS") is False
+    assert _ranks_in_profile(pilares, "VALOR") is True
+
+
+def test_multiplo_negativo_nao_e_multiplo_barato():
+    # P/L de −4,50 quer dizer prejuízo, não desconto. O percentil ordena do
+    # menor para o maior, e o negativo era classificado como o mais barato do
+    # setor: a AZTE3 chegou a segundo lugar geral com P/L −4,50 e EV/EBIT
+    # −6,97, tirando 86 no pilar de valuation.
+    assert scoring_value(_stock(p_l=-4.5), "p_l") is None
+    assert scoring_value(_stock(p_vp=-1.2), "p_vp") is None
+    assert scoring_value(_stock(ev_ebit=-6.97), "ev_ebit") is None
+    assert scoring_value(_stock(p_l=4.5), "p_l") == 4.5
+
+
+def test_alavancagem_negativa_so_vale_com_ebit_positivo():
+    # Dívida líquida sobre EBIT negativa tem duas leituras opostas: caixa
+    # líquido (ótimo) ou EBIT negativo com dívida (péssimo). Como menor é
+    # melhor, as duas eram premiadas igualmente.
+    caixa_liquido = _stock(dividaliquidaebit=-1.5, margemebit=12.0)
+    sem_ebit = _stock(dividaliquidaebit=-1.5, margemebit=-8.0)
+
+    assert scoring_value(caixa_liquido, "dividaliquidaebit") == -1.5
+    assert scoring_value(sem_ebit, "dividaliquidaebit") is None
+
+
+def test_o_ativo_com_multiplo_negativo_continua_ranqueado_pelo_resto():
+    # Tirar a métrica do ranking não é esconder o ativo: ele continua na
+    # lista, avaliado pelo que de fato se aplica, com o alerta no card.
+    acoes = [_stock(f"AAA{i}", p_l=5.0 + i) for i in range(5)]
+    acoes.append(_stock("PREJ3", p_l=-4.5))
+
+    percentis = compute_metric_percentiles(acoes)
+
+    assert "p_l" not in percentis["PREJ3"]
+    assert "roic" in percentis["PREJ3"]

@@ -28,6 +28,7 @@ class StockScore(db.Model):
     score_saude = db.Column(db.Float)
     score_crescimento = db.Column(db.Float)
     score_dividendos = db.Column(db.Float)
+    score_ciclo = db.Column(db.Float)
 
     eligible = db.Column(db.Boolean, nullable=False, default=True)
     exclusion_reasons = db.Column(db.Text)
@@ -74,6 +75,11 @@ class StockScore(db.Model):
                     "key": "dividendos",
                     "label": "Dividendos",
                     "value": self.score_dividendos,
+                },
+                {
+                    "key": "ciclo",
+                    "label": "Momento do ciclo",
+                    "value": self.score_ciclo,
                 },
             ],
             "eligible": self.eligible,

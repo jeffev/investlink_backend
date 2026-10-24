@@ -37,7 +37,11 @@ CVM_FIELD_MAP = {
 }
 
 SOURCE_CVM = "CVM"
-SOURCE_STATUSINVEST = "STATUSINVEST"
+# O rótulo da fonte pública. Era "STATUSINVEST" e passou a mentir quando a
+# coleta trocou para o Fundamentus: o card anunciava uma procedência que o
+# dado não tinha. "PUBLICA" descreve o que importa — número de fonte aberta,
+# do último exercício fechado, não auditado nesta base.
+SOURCE_STATUSINVEST = "PUBLICA"
 
 # The ticker root is four alphanumeric characters, not four letters: B3SA3 is
 # the exchange itself. This mirrors data_sources/ticker_cvm_map.py in the
@@ -103,26 +107,82 @@ def _recalculated_multiples(stock_data, fundamentals):
     return multiples
 
 
+# Divergência a partir da qual o número auditado deixa de ser "discordância"
+# e passa a ser erro. A diferença legítima entre o LTM da CVM e o exercício
+# fechado da fonte pública raramente passa do dobro; mil vezes é escala
+# trocada.
+MAX_MULTIPLE_DIVERGENCE = 5.0
+
+
+def _implausible(recalculated, published):
+    """
+    O múltiplo recalculado é incompatível com o publicado?
+
+    Existe porque a quantidade de ações em circulação vem errada da CVM para
+    algumas empresas — o Santander aparece com 7,4 **milhões** de ações em vez
+    de 7,4 bilhões. O LPA sai mil vezes maior, o P/L mil vezes menor, e a
+    empresa vira "a mais barata do setor": SANB3, SANB4, SANB11, SYNE3 e POSI3
+    estavam entre as ações com P/VP abaixo de 0,05, que é impossível para
+    companhia listada.
+
+    A verificação compara o número auditado com o que a fonte pública
+    publicou. Não é desempate — é detector de ordem de grandeza. Discordar por
+    30% é normal; discordar por mil vezes é defeito.
+    """
+    if not recalculated or not published or published <= 0:
+        return False
+    razao = recalculated / published
+    return razao > MAX_MULTIPLE_DIVERGENCE or razao < 1 / MAX_MULTIPLE_DIVERGENCE
+
+
+def _multiples_are_sane(stock_data, recalculated):
+    """Todos os múltiplos recalculados batem com a ordem de grandeza publicada."""
+    for column, value in recalculated.items():
+        if _implausible(value, stock_data.get(column)):
+            logging.warning(
+                f"{stock_data.get('ticker')}: múltiplo {column} da CVM "
+                f"({value}) incompatível com o publicado "
+                f"({stock_data.get(column)}) — fundamento auditado descartado"
+            )
+            return False
+    return True
+
+
 def apply_cvm_fundamentals(stock_data, fundamentals):
     """
-    Overwrites the scraped accounting figures with the audited ones in place.
+    Substitui o fundamento da fonte pública pelo auditado, no lugar.
 
-    Returns the number of fields replaced, so the caller can report how much of
-    the universe is actually running on CVM data.
+    Devolve quantos campos foram trocados, para o chamador poder relatar que
+    parte do universo roda de fato com dado da CVM.
+
+    Quando o múltiplo recalculado é incompatível em ordem de grandeza com o
+    publicado, **nada é trocado**: um dado auditado com escala errada é pior
+    que um dado público correto, porque ele chega com o selo de auditado e vai
+    para o topo da vitrine.
     """
     if fundamentals is None:
+        stock_data["fundamentals_source"] = SOURCE_STATUSINVEST
+        return 0
+
+    recalculated = _recalculated_multiples(stock_data, fundamentals)
+    if not _multiples_are_sane(stock_data, recalculated):
         stock_data["fundamentals_source"] = SOURCE_STATUSINVEST
         return 0
 
     replaced = 0
     for column, attribute in CVM_FIELD_MAP.items():
         value = getattr(fundamentals, attribute, None)
-        if value is None:
+        # Zero não é valor, é componente que faltou no cálculo do LTM — a
+        # convenção vale no projeto inteiro (`_is_usable` no score). Gravar o
+        # zero por cima destruía dado bom: o ALLD3 tinha ROE de 23,06% na
+        # fonte pública e ficou com 0, e 21 das ações elegíveis perderam pelo
+        # menos um indicador assim.
+        if value is None or value == 0:
             continue
         stock_data[column] = value
         replaced += 1
 
-    for column, value in _recalculated_multiples(stock_data, fundamentals).items():
+    for column, value in recalculated.items():
         stock_data[column] = value
         replaced += 1
 

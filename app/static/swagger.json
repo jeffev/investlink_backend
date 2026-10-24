@@ -1211,6 +1211,24 @@
             ],
             "default": "ACAO",
             "description": "FII troca a tabela, os pilares e os campos do card: fundo não tem Graham, ROE nem CAGR de lucro."
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "type": "number",
+            "description": "Preço máximo por ativo. A melhor oportunidade que não cabe no bolso não é oportunidade."
+          },
+          {
+            "name": "only_drawdown",
+            "in": "query",
+            "type": "boolean",
+            "description": "Só ativos que caíram do topo de 12 meses com o fundamento de pé."
+          },
+          {
+            "name": "exclude_portfolio",
+            "in": "query",
+            "type": "boolean",
+            "description": "Esconde o que já está na carteira do usuário."
           }
         ],
         "responses": {
@@ -1761,6 +1779,20 @@
           },
           "409": {
             "description": "Sem histórico de múltiplos derivado"
+          }
+        }
+      }
+    },
+    "/jobs/last-refresh": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Quando a rotina automática atualizou os dados pela última vez",
+        "description": "A vitrine mostra de quando é o preço. status NUNCA significa que a rotina ainda não rodou; PARCIAL significa que parte das etapas falhou e parte do dado é de antes.",
+        "responses": {
+          "200": {
+            "description": "Sucesso"
           }
         }
       }

@@ -233,3 +233,67 @@ def test_enrichment_never_breaks_the_refresh(app):
             assert enrich_with_cvm(cached) == 0
 
         assert cached[0]["lpa"] == 8.35
+
+
+# ── Trava de plausibilidade do número auditado ───────────────────────────────
+#
+# A quantidade de ações em circulação vem errada da CVM para algumas empresas:
+# o Santander aparece com 7,4 **milhões** de ações em vez de 7,4 bilhões. O LPA
+# sai mil vezes maior, o P/L mil vezes menor, e a empresa vira "a mais barata
+# do setor" — com o selo de auditada, que é o que torna o erro perigoso.
+
+
+class _FundamentoFalso:
+    def __init__(self, lpa_ltm=None, vpa=None, ltm_end=None):
+        self.lpa_ltm = lpa_ltm
+        self.vpa = vpa
+        self.ltm_end = ltm_end
+        for campo in (
+            "roe_ltm",
+            "roic_ltm",
+            "m_bruta_ltm",
+            "m_ebit_ltm",
+            "m_liquida_ltm",
+            "div_liq_ebit",
+            "div_liq_pl",
+            "liq_corrente",
+        ):
+            setattr(self, campo, None)
+
+
+def test_escala_errada_de_acoes_nao_sobrescreve_o_publicado():
+    # Caso real do SANB11: preço 27,53 e P/L publicado 6,66; com o LPA da CVM
+    # o P/L sairia 0,015.
+    stock = {"ticker": "SANB11", "price": 27.53, "p_l": 6.66, "p_vp": 1.05}
+
+    trocados = apply_cvm_fundamentals(
+        stock, _FundamentoFalso(lpa_ltm=1848.53, vpa=17241.08)
+    )
+
+    assert trocados == 0
+    assert stock["p_l"] == 6.66
+    assert stock["p_vp"] == 1.05
+    assert stock["fundamentals_source"] != "CVM"
+
+
+def test_divergencia_normal_continua_prevalecendo_a_cvm():
+    # A CVM substituir a fonte pública é o objetivo; discordar por 30% é o
+    # esperado entre LTM e exercício fechado.
+    stock = {"ticker": "PETR4", "price": 58.68, "p_l": 7.40, "p_vp": 1.32}
+
+    trocados = apply_cvm_fundamentals(stock, _FundamentoFalso(lpa_ltm=10.35, vpa=37.39))
+
+    assert trocados > 0
+    assert stock["p_l"] == round(58.68 / 10.35, 4)
+    assert stock["fundamentals_source"] == "CVM"
+
+
+def test_sem_multiplo_publicado_a_trava_nao_bloqueia():
+    # Papel novo chega sem referência; bloquear aqui seria descartar o
+    # auditado por falta do não auditado.
+    stock = {"ticker": "NOVO3", "price": 10.0, "p_l": 0.0, "p_vp": 0.0}
+
+    trocados = apply_cvm_fundamentals(stock, _FundamentoFalso(lpa_ltm=2.0, vpa=5.0))
+
+    assert trocados > 0
+    assert stock["p_l"] == 5.0

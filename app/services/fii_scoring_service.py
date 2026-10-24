@@ -38,10 +38,11 @@ from services.scoring_service import (
 
 # Cada métrica é (atributo do fundo, menor_é_melhor).
 FII_PILLAR_METRICS = {
-    # As duas metades do valuation: barato frente aos vizinhos de segmento e
-    # barato frente ao próprio passado. Só a primeira não distingue um fundo
-    # descontado de um segmento inteiro fora de moda.
-    "valuation": [("p_vp", True), ("p_vp_vs_historico", True)],
+    # Valuation compara com os vizinhos de segmento; o "barato para ele
+    # mesmo" saiu daqui e virou parte do pilar de ciclo, que é onde a
+    # pergunta "é hora?" vive. Mantê-lo nos dois contaria o mesmo dado duas
+    # vezes.
+    "valuation": [("p_vp", True)],
     "renda": [("dy", False), ("ffo_yield", False), ("dividend_cagr", False)],
     "liquidez": [("liquidezmediadiaria", False), ("numerocotistas", False)],
     # A tendência do patrimônio por cota é o único sinal aqui que distingue
@@ -51,6 +52,10 @@ FII_PILLAR_METRICS = {
         ("cota_cagr", False),
         ("qtd_imoveis", False),
     ],
+    # Onde a cota está no próprio ciclo. Razão, e não queda em porcentagem,
+    # porque a convenção do projeto trata zero como "sem dado" e queda zero é
+    # justamente a cota colada no topo — o pior ponto de entrada.
+    "ciclo": [("preco_sobre_topo", True), ("p_vp_vs_historico", True)],
 }
 
 # `percentualcaixa` ficou de fora de propósito: caixa demais é capital parado
@@ -63,22 +68,25 @@ FII_PILLAR_METRICS = {
 
 FII_PROFILES = {
     "EQUILIBRADO": {
-        "valuation": 0.30,
-        "renda": 0.30,
-        "liquidez": 0.20,
-        "estrutura": 0.20,
+        "valuation": 0.25,
+        "renda": 0.25,
+        "liquidez": 0.15,
+        "estrutura": 0.15,
+        "ciclo": 0.20,
     },
     "RENDA": {
-        "valuation": 0.20,
-        "renda": 0.50,
-        "liquidez": 0.20,
+        "valuation": 0.15,
+        "renda": 0.45,
+        "liquidez": 0.15,
         "estrutura": 0.10,
+        "ciclo": 0.15,
     },
     "VALOR": {
-        "valuation": 0.50,
-        "renda": 0.20,
-        "liquidez": 0.20,
-        "estrutura": 0.10,
+        "valuation": 0.40,
+        "renda": 0.15,
+        "liquidez": 0.15,
+        "estrutura": 0.05,
+        "ciclo": 0.25,
     },
 }
 
@@ -92,6 +100,14 @@ HISTORY_WINDOW_MONTHS = 36
 # Abaixo disto a mediana é ruído: fundo recém-listado ainda não tem "próprio
 # histórico" contra o qual comparar.
 MIN_HISTORY_MONTHS = 12
+# Janela do "está em alta ou caiu". O topo da série inteira responde outra
+# pergunta: pode ser de 2020 e não diz nada sobre o momento.
+CYCLE_WINDOW_MONTHS = 12
+# Medido nos fundos líquidos: cota colada no topo é o pior ponto de entrada,
+# e cair com o patrimônio encolhendo é armadilha, não desconto.
+NEAR_PEAK = -5.0
+# Queda a partir da qual o desconto é relevante, medida no universo líquido.
+RELEVANT_DROP = -15.0
 
 # Guard rails, todos medidos sobre o universo publicado.
 # R$ 200 mil/dia deixa 178 dos 570 fundos — bem mais permissivo que o piso de
@@ -207,9 +223,11 @@ def get_history_signals(tickers):
             continue
 
         patrimoniais = [close / p_vp for p_vp, close in linhas if close and p_vp]
+        cotacoes = [close for _, close in linhas[-CYCLE_WINDOW_MONTHS:] if close]
         sinais[ticker] = {
             "p_vp_mediano": statistics.median(p_vp for p_vp, _ in linhas),
             "vp_tendencia": _variacao(patrimoniais),
+            "pico_12m": max(cotacoes) if cotacoes else None,
             "meses": len(linhas),
         }
     return sinais
@@ -220,6 +238,35 @@ def _variacao(serie):
     if len(serie) < 2 or not serie[0]:
         return None
     return round((serie[-1] / serie[0] - 1) * 100, 1)
+
+
+def _estado_do_ciclo(queda, encolhendo):
+    """
+    O estado do ciclo da cota, no mesmo vocabulário usado nas ações.
+
+    Cair com o patrimônio encolhendo não é desconto: é o fundo distribuindo o
+    próprio capital enquanto a cota afunda.
+    """
+    if queda is None:
+        return None, None
+    if queda <= RELEVANT_DROP and encolhendo:
+        return (
+            "QUEDA_COM_DETERIORACAO",
+            f"Cota caiu {abs(queda):.0f}% do topo de 12 meses, mas o patrimônio "
+            "por cota encolheu junto",
+        )
+    if queda <= RELEVANT_DROP:
+        return (
+            "OPORTUNIDADE_DE_CICLO",
+            f"Cota caiu {abs(queda):.0f}% do topo de 12 meses com o patrimônio "
+            "de pé",
+        )
+    if queda >= NEAR_PEAK:
+        return (
+            "PERTO_DO_TOPO",
+            "Cota perto da máxima de 12 meses — comprando no topo do próprio ciclo",
+        )
+    return "NEUTRO", None
 
 
 def attach_history_signals(fiis, sinais):
@@ -240,11 +287,44 @@ def attach_history_signals(fiis, sinais):
         # justamente porque ele está desabando. O HCTR11 seguia em quarto no
         # perfil VALOR por esse caminho.
         p_vp = scoring_value(fii, "p_vp")
-        fii.p_vp_vs_historico = (
-            round(p_vp / mediana, 4) if mediana and _is_usable(p_vp) else None
-        )
+
         fii.vp_cota_tendencia = do_fundo.get("vp_tendencia")
         fii.meses_de_historico = do_fundo.get("meses")
+        encolhendo = (
+            fii.vp_cota_tendencia is not None
+            and fii.vp_cota_tendencia <= SHRINKING_BOOK_VALUE
+        )
+        # Com o patrimônio encolhendo, "barato para ele mesmo" deixa de ser
+        # evidência: a cota está barata contra o próprio passado **porque** o
+        # patrimônio está afundando. O TGAR11 levava o alerta de patrimônio
+        # encolhendo e, ao mesmo tempo, 100 no pilar de ciclo por este
+        # caminho. Fundamento em deterioração não sustenta nenhuma das duas
+        # metades do pilar.
+        fii.p_vp_vs_historico = (
+            round(p_vp / mediana, 4)
+            if mediana and _is_usable(p_vp) and not encolhendo
+            else None
+        )
+
+        pico = do_fundo.get("pico_12m")
+        if pico and _is_usable(fii.price) and not encolhendo:
+            topo = max(pico, fii.price)
+            fii.queda_12m = round((fii.price - topo) / topo * 100, 1)
+            fii.preco_sobre_topo = round(fii.price / topo, 4)
+        else:
+            # Patrimônio encolhendo tira a cota do ranking de ciclo: a queda
+            # está acontecendo pelo motivo errado. É a mesma regra que tirou
+            # os fundos de crédito em aflição do topo da vitrine.
+            fii.queda_12m = (
+                None
+                if not pico
+                else round(
+                    (fii.price - max(pico, fii.price)) / max(pico, fii.price) * 100, 1
+                )
+            )
+            fii.preco_sobre_topo = None
+
+        fii.cycle_state, fii.cycle_message = _estado_do_ciclo(fii.queda_12m, encolhendo)
 
 
 # ── Guard rails ──────────────────────────────────────────────────────────────
@@ -369,6 +449,7 @@ def build_reasons(fii, pillars):
         "renda": "Renda acima da média do segmento",
         "liquidez": "Mais líquido que a média do segmento",
         "estrutura": "Estrutura melhor que a do segmento",
+        "ciclo": "Momento de entrada melhor que o do segmento",
     }
     ranked = sorted(
         ((pillar, value) for pillar, value in pillars.items() if value is not None),
@@ -382,6 +463,19 @@ def build_reasons(fii, pillars):
         if value >= STRONG_PILLAR
     ]
 
+    queda = getattr(fii, "queda_12m", None)
+    if (
+        queda is not None
+        and queda <= RELEVANT_DROP
+        and getattr(fii, "preco_sobre_topo", None)
+    ):
+        reasons.append(
+            _entry(
+                "CICLO_OPORTUNIDADE",
+                f"Cota caiu {abs(queda):.0f}% do topo de 12 meses com o "
+                "patrimônio de pé",
+            )
+        )
     if _is_usable(fii.p_vp) and 0 < fii.p_vp <= CHEAP_P_VP:
         reasons.append(
             _entry(
@@ -428,6 +522,16 @@ def build_red_flags(fii):
                 "patrimônio não está gerando aluguel",
             )
         )
+    queda = getattr(fii, "queda_12m", None)
+    if queda is not None and queda >= NEAR_PEAK:
+        flags.append(
+            _entry(
+                "CICLO_TOPO",
+                "Cota perto da máxima de 12 meses — comprando no topo do "
+                "próprio ciclo",
+            )
+        )
+
     tendencia = getattr(fii, "vp_cota_tendencia", None)
     if tendencia is not None and tendencia <= SHRINKING_BOOK_VALUE:
         flags.append(
@@ -510,6 +614,7 @@ def _score_row(fii, pillars, profile, exclusion_reasons, run_date):
         "score_renda": pillars.get("renda"),
         "score_liquidez": pillars.get("liquidez"),
         "score_estrutura": pillars.get("estrutura"),
+        "score_ciclo": pillars.get("ciclo"),
         "eligible": eligible,
         "exclusion_reasons": json.dumps(exclusion_reasons, ensure_ascii=False),
         "reasons": json.dumps(build_reasons(fii, pillars), ensure_ascii=False),

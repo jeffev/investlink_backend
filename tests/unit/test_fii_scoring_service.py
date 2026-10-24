@@ -284,9 +284,12 @@ def test_o_desconto_historico_conta_no_pilar_de_valuation():
     )
 
 
-def test_a_razao_entra_na_definicao_do_pilar_de_valuation():
-    metricas = [metric for metric, _ in FII_PILLAR_METRICS["valuation"]]
-    assert metricas == ["p_vp", "p_vp_vs_historico"]
+def test_o_barato_para_si_mesmo_vive_no_pilar_de_ciclo():
+    # Valuation compara com os vizinhos de segmento; "barato para ele mesmo"
+    # é pergunta de momento, não de comparação — e mantê-lo nos dois pilares
+    # contaria o mesmo dado duas vezes.
+    assert [m for m, _ in FII_PILLAR_METRICS["valuation"]] == ["p_vp"]
+    assert "p_vp_vs_historico" in [m for m, _ in FII_PILLAR_METRICS["ciclo"]]
 
 
 def _historico(p_vps):
@@ -471,3 +474,25 @@ def test_o_fundo_em_aflicao_ainda_responde_por_que_nao_esta_na_lista():
     assert linha["eligible"] is True
     assert "DESCONTO_DE_AFLICAO" in linha["red_flags"]
     assert "PATRIMONIO_ENCOLHENDO" in linha["red_flags"]
+
+
+def test_patrimonio_encolhendo_tira_as_duas_metades_do_ciclo():
+    # O TGAR11 levava o alerta de patrimônio encolhendo e, ao mesmo tempo, 100
+    # no pilar de ciclo: a queda era barrada, mas "barato para ele mesmo"
+    # continuava pontuando — e ele está barato contra o próprio passado
+    # **porque** o patrimônio está afundando.
+    fundo = _fii("TGAR11", p_vp=0.48)
+    attach_history_signals(
+        fundos := [fundo],
+        {"TGAR11": _sinais(mediana=0.90, tendencia=-12.7, meses=32)},
+    )
+
+    assert fundos[0].p_vp_vs_historico is None
+    assert fundos[0].preco_sobre_topo is None
+
+
+def test_patrimonio_de_pe_mantem_as_duas_metades():
+    fundo = _fii("HGLG11", p_vp=0.80)
+    attach_history_signals([fundo], {"HGLG11": _sinais(mediana=1.00, tendencia=2.0)})
+
+    assert fundo.p_vp_vs_historico == 0.8

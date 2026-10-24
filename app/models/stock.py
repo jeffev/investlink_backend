@@ -63,6 +63,16 @@ class Stock(db.Model):
     # rather than deleted: a user may still hold it in their portfolio.
     active = db.Column(db.Boolean, nullable=False, default=True)
     delisted_at = db.Column(db.Date)
+    # Desde quando a fonte parou de devolver o papel. A deslistagem só vale
+    # depois de alguns dias de ausência: trocar de fonte, ou a fonte publicar
+    # uma lista menor num dia, não tira a ação da bolsa.
+    missing_since = db.Column(db.Date)
+
+    # Onde o papel está no próprio ciclo. Gravado junto com o score porque é
+    # calculado na mesma passada e lido na vitrine e na tabela.
+    queda_12m = db.Column(db.Float)
+    cycle_state = db.Column(db.String(30))
+    cycle_message = db.Column(db.String(255))
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -158,6 +168,9 @@ class Stock(db.Model):
             "magic_formula_rank": self.magic_formula_rank,
             "active": self.active,
             "delisted_at": (self.delisted_at.isoformat() if self.delisted_at else None),
+            "queda_12m": self.queda_12m,
+            "cycle_state": self.cycle_state,
+            "cycle_message": self.cycle_message,
             "fundamentals_source": self.fundamentals_source,
             "fundamentals_date": (
                 self.fundamentals_date.isoformat() if self.fundamentals_date else None

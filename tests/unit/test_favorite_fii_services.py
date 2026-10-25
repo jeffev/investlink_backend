@@ -311,6 +311,23 @@ class TestFavoriteFiiServices:
                 result_data = result.get_json()
                 assert result_data["message"] == "Unauthorized"
 
+    def test_edicao_nao_transfere_a_favorita_fii_de_dono(self, app):
+        """`user_id` no corpo era transferir a favorita para outra conta."""
+        with app.app_context():
+            mock_favorite = MagicMock(spec=FavoriteFii)
+            mock_favorite.user_id = 1
+
+            with patch("services.favorite_fii_services.db.session") as mock_db_session:
+                mock_db_session.get.return_value = mock_favorite
+
+                _, status_code = edit_favorite_fii(
+                    1, {"user_id": 99, "ceiling_price": 120.0}, 1
+                )
+
+                assert status_code == 200
+                assert mock_favorite.user_id == 1
+                assert mock_favorite.ceiling_price == 120.0
+
     def test_edit_favorite_fii_not_found(self, app):
         """Test editing a favorite FII that doesn't exist"""
         with app.app_context():

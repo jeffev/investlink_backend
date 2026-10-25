@@ -121,6 +121,12 @@ def protected_route(view_func, required_profile=None):
     return decorated_view
 
 
+# Rotas que varrem o histórico inteiro (e o backtest ainda consulta o BCB):
+# qualquer visitante da demo tem sessão, então sem teto um laço de requisições
+# ocupa os dois workers do gunicorn.
+EXPENSIVE_ROUTE_LIMIT = "10 per minute"
+
+
 def setup_routes(app):
     # Health route — fora do /v1 porque é infraestrutura, não API pública
     app.add_url_rule("/health", methods=["GET"], view_func=health_json)
@@ -469,7 +475,9 @@ def setup_routes(app):
     app.add_url_rule(
         "/v1/strategy/<int:strategy_id>/backtest",
         methods=["GET"],
-        view_func=protected_route(run_backtest_json),
+        view_func=protected_route(
+            limiter.limit(EXPENSIVE_ROUTE_LIMIT)(run_backtest_json)
+        ),
     )
 
     # News routes
@@ -493,7 +501,9 @@ def setup_routes(app):
     app.add_url_rule(
         "/v1/opportunities/backtest",
         methods=["GET"],
-        view_func=protected_route(backtest_score_json),
+        view_func=protected_route(
+            limiter.limit(EXPENSIVE_ROUTE_LIMIT)(backtest_score_json)
+        ),
     )
     app.add_url_rule(
         "/v1/stock/<string:ticker>/score",

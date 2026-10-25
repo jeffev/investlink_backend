@@ -136,9 +136,24 @@ def add_position(position_data):
     return jsonify({"message": "Position added successfully"}), 201
 
 
-@handle_db_errors
-def edit_position(position_id, position_data):
+def _owned_position(position_id, user_id):
+    """
+    A posição só existe para o dono.
+
+    Sem a comparação, `PUT`/`DELETE /v1/portfolio/<id>` alteravam e apagavam a
+    carteira de qualquer conta — e a conta demo é pública, então qualquer
+    visitante percorria os ids. Posição alheia responde como inexistente para
+    não confirmar que o id existe.
+    """
     position = db.session.get(Portfolio, position_id)
+    if position is None or position.user_id != user_id:
+        return None
+    return position
+
+
+@handle_db_errors
+def edit_position(position_id, position_data, user_id):
+    position = _owned_position(position_id, user_id)
     if position is None:
         return jsonify({"message": "Position not found"}), 404
 
@@ -157,8 +172,8 @@ def edit_position(position_id, position_data):
 
 
 @handle_db_errors
-def delete_position(position_id):
-    position = db.session.get(Portfolio, position_id)
+def delete_position(position_id, user_id):
+    position = _owned_position(position_id, user_id)
     if position is None:
         return jsonify({"message": "Position not found"}), 404
 

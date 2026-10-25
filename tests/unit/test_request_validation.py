@@ -20,12 +20,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from models.user import User
+from routes.favorite_fii_routes import edit_favorite_fii_json, new_favorite_fii_json
 from routes.favorite_routes import edit_favorite_json, new_favorite_json
 from routes.portfolio_routes import (
     add_fii_position_json,
     add_position_json,
     edit_position_json,
 )
+from routes.stock_routes import list_stocks_json
 from routes.user_routes import (
     change_password_json,
     edit_user_json,
@@ -298,11 +300,87 @@ def test_edicao_de_posicao_so_leva_o_que_foi_enviado(app):
     # `edit_position` faz `position_data.get("quantity", position.quantity)`;
     # uma chave com None venceria o valor atual e quebraria a comparação.
     with app.test_request_context(json={"quantity": 50}):
-        with patch("routes.portfolio_routes.edit_position") as service:
+        with (
+            patch("routes.portfolio_routes.edit_position") as service,
+            patch(
+                "routes.portfolio_routes.get_jwt_identity", return_value=TOKEN_USER_ID
+            ),
+        ):
             service.return_value = (MagicMock(), 200)
             edit_position_json(1)
 
     assert service.call_args[0][1] == {"quantity": 50.0}
+
+
+def test_edicao_de_posicao_leva_o_dono_do_token(app):
+    # Sem o dono, o serviço editava a posição de qualquer conta pelo id.
+    with app.test_request_context(json={"quantity": 50}):
+        with (
+            patch("routes.portfolio_routes.edit_position") as service,
+            patch(
+                "routes.portfolio_routes.get_jwt_identity", return_value=TOKEN_USER_ID
+            ),
+        ):
+            service.return_value = (MagicMock(), 200)
+            edit_position_json(1)
+
+    assert service.call_args[0][2] == TOKEN_USER_ID
+
+
+# ── Favoritas de FII ─────────────────────────────────────────────────────────
+
+
+def test_a_favorita_de_fii_nasce_no_dono_do_token(app):
+    # Mesmo buraco que a favorita de ação tinha: `user_id` vinha do corpo.
+    with app.test_request_context(
+        json={"fii_ticker": "KNRI11", "user_id": OUTRO_USUARIO, "id": 1}
+    ):
+        with (
+            patch("routes.favorite_fii_routes.new_favorite_fii") as service,
+            patch(
+                "routes.favorite_fii_routes.get_jwt_identity",
+                return_value=TOKEN_USER_ID,
+            ),
+        ):
+            service.return_value = (MagicMock(), 201)
+            new_favorite_fii_json()
+
+    enviado = service.call_args[0][0]
+    assert enviado["user_id"] == TOKEN_USER_ID
+    assert "id" not in enviado
+
+
+def test_a_edicao_de_favorita_de_fii_nao_troca_dono(app):
+    with app.test_request_context(
+        json={"target_price": 90.0, "user_id": OUTRO_USUARIO, "fii_ticker": "X"}
+    ):
+        with (
+            patch("routes.favorite_fii_routes.edit_favorite_fii") as service,
+            patch(
+                "routes.favorite_fii_routes.get_jwt_identity",
+                return_value=TOKEN_USER_ID,
+            ),
+        ):
+            service.return_value = (MagicMock(), 200)
+            edit_favorite_fii_json(1)
+
+    assert service.call_args[0][1] == {"target_price": 90.0}
+
+
+# ── Filtros das listagens ────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("filtros", ["nao-e-json", '{"id": "dy"}', "[1, 2]"])
+def test_filtro_malformado_e_400_e_nao_500(app, filtros):
+    with app.test_request_context(query_string={"filters": filtros}):
+        with (
+            patch("routes.stock_routes.list_stocks") as service,
+            patch("routes.stock_routes.get_jwt_identity", return_value=TOKEN_USER_ID),
+        ):
+            resposta = list_stocks_json()
+
+    assert _status(resposta) == 400
+    service.assert_not_called()
 
 
 # ── Favoritas ────────────────────────────────────────────────────────────────

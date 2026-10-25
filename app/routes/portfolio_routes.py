@@ -49,11 +49,11 @@ def edit_position_json(position_id):
     position_data, error = load_payload(EditPositionSchema())
     if error:
         return error
-    return edit_position(position_id, position_data)
+    return edit_position(position_id, position_data, get_jwt_identity())
 
 
 def delete_position_json(position_id):
-    return delete_position(position_id)
+    return delete_position(position_id, get_jwt_identity())
 
 
 def list_portfolio_fii_json():
@@ -81,11 +81,11 @@ def edit_fii_position_json(position_id):
     position_data, error = load_payload(EditPositionSchema())
     if error:
         return error
-    return edit_fii_position(position_id, position_data)
+    return edit_fii_position(position_id, position_data, get_jwt_identity())
 
 
 def delete_fii_position_json(position_id):
-    return delete_fii_position(position_id)
+    return delete_fii_position(position_id, get_jwt_identity())
 
 
 def projected_income_json():

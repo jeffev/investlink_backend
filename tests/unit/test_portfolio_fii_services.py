@@ -131,7 +131,7 @@ class TestPortfolioFiiServices:
         with app.app_context():
             with patch("services.portfolio_fii_services.db.session") as mock_session:
                 mock_session.get.return_value = None
-                result, status = edit_fii_position(999, {"quantity": 10})
+                result, status = edit_fii_position(999, {"quantity": 10}, 1)
                 assert status == 404
 
     def test_delete_fii_position_not_found(self, app):
@@ -139,15 +139,38 @@ class TestPortfolioFiiServices:
         with app.app_context():
             with patch("services.portfolio_fii_services.db.session") as mock_session:
                 mock_session.get.return_value = None
-                result, status = delete_fii_position(999)
+                result, status = delete_fii_position(999, 1)
                 assert status == 404
 
     def test_delete_fii_position_success(self, app):
         """Delete bem-sucedido → 200."""
         with app.app_context():
             mock_pos = MagicMock()
+            mock_pos.user_id = 1
             with patch("services.portfolio_fii_services.db.session") as mock_session:
                 mock_session.get.return_value = mock_pos
-                result, status = delete_fii_position(1)
+                result, status = delete_fii_position(1, 1)
                 assert status == 200
                 mock_session.delete.assert_called_once_with(mock_pos)
+
+    def test_posicao_fii_de_outro_usuario_nao_e_apagada(self, app):
+        """Posição de outra conta → 404, nada apagado."""
+        with app.app_context():
+            mock_pos = MagicMock()
+            mock_pos.user_id = 2
+            with patch("services.portfolio_fii_services.db.session") as mock_session:
+                mock_session.get.return_value = mock_pos
+                _, status = delete_fii_position(1, 1)
+                assert status == 404
+                mock_session.delete.assert_not_called()
+
+    def test_posicao_fii_de_outro_usuario_nao_e_editada(self, app):
+        """Posição de outra conta → 404, nada gravado."""
+        with app.app_context():
+            mock_pos = MagicMock()
+            mock_pos.user_id = 2
+            with patch("services.portfolio_fii_services.db.session") as mock_session:
+                mock_session.get.return_value = mock_pos
+                _, status = edit_fii_position(1, {"quantity": 5}, 1)
+                assert status == 404
+                mock_session.commit.assert_not_called()

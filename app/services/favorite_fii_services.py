@@ -75,22 +75,25 @@ def new_favorite_fii(favorite_data):
     if existing_favorite:
         return jsonify({"message": "This FII is already favorited by this user"}), 400
 
-    new_favorite = FavoriteFii(**favorite_data)
+    # Campo a campo, e não `FavoriteFii(**favorite_data)`: o desempacotamento
+    # gravava como coluna qualquer chave que chegasse.
+    new_favorite = FavoriteFii(
+        user_id=user_id,
+        fii_ticker=fii_ticker,
+        ceiling_price=favorite_data.get("ceiling_price"),
+        target_price=favorite_data.get("target_price"),
+    )
     db.session.add(new_favorite)
     return jsonify({"message": "Favorite added successfully"}), 201
 
 
+# Dono e ticker não mudam por edição: trocar o `user_id` era transferir a
+# favorita para a conta de outro.
+EDITABLE_FIELDS_FAVORITE_FII = {"ceiling_price", "target_price"}
+
+
 @handle_db_operations
 def edit_favorite_fii(favorite_id, favorite_data, current_user_id):
-    user_id = favorite_data.get("user_id")
-    fii_ticker = favorite_data.get("fii_ticker")
-
-    if user_id is not None and not db.session.get(User, user_id):
-        return jsonify({"message": "User not found"}), 404
-
-    if fii_ticker is not None and not db.session.get(Fii, fii_ticker):
-        return jsonify({"message": "FII not found"}), 404
-
     favorite = db.session.get(FavoriteFii, favorite_id)
     if favorite is None:
         return jsonify({"message": "Favorite not found"}), 404
@@ -99,7 +102,8 @@ def edit_favorite_fii(favorite_id, favorite_data, current_user_id):
         return jsonify({"message": "Unauthorized"}), 403
 
     for key, value in favorite_data.items():
-        setattr(favorite, key, value)
+        if key in EDITABLE_FIELDS_FAVORITE_FII:
+            setattr(favorite, key, value)
 
     return jsonify({"message": "Favorite edited successfully"}), 200
 

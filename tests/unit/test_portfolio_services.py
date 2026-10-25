@@ -98,12 +98,13 @@ class TestPortfolioServices:
         with app.app_context():
             position_data = {"quantity": 20.0, "average_price": 30.0}
             mock_position = MagicMock(spec=Portfolio)
+            mock_position.user_id = 1
 
             with patch("services.portfolio_services.db") as mock_db:
                 mock_db.session = MagicMock()
                 mock_db.session.get.return_value = mock_position
 
-                result, status_code = edit_position(1, position_data)
+                result, status_code = edit_position(1, position_data, 1)
 
                 assert status_code == 200
                 result_data = result.get_json()
@@ -112,16 +113,48 @@ class TestPortfolioServices:
     def test_delete_position_success(self, app):
         with app.app_context():
             mock_position = MagicMock(spec=Portfolio)
+            mock_position.user_id = 1
 
             with patch("services.portfolio_services.db") as mock_db:
                 mock_db.session = MagicMock()
                 mock_db.session.get.return_value = mock_position
 
-                result, status_code = delete_position(1)
+                result, status_code = delete_position(1, 1)
 
                 assert status_code == 200
                 result_data = result.get_json()
                 assert result_data["message"] == "Position deleted successfully"
+
+    def test_posicao_de_outro_usuario_nao_e_editada(self, app):
+        # Era IDOR: o id da rota bastava, e a conta demo é pública.
+        with app.app_context():
+            mock_position = MagicMock(spec=Portfolio)
+            mock_position.user_id = 2
+            mock_position.quantity = 10.0
+
+            with patch("services.portfolio_services.db") as mock_db:
+                mock_db.session = MagicMock()
+                mock_db.session.get.return_value = mock_position
+
+                _, status_code = edit_position(1, {"quantity": 1.0}, 1)
+
+                assert status_code == 404
+                assert mock_position.quantity == 10.0
+                mock_db.session.commit.assert_not_called()
+
+    def test_posicao_de_outro_usuario_nao_e_apagada(self, app):
+        with app.app_context():
+            mock_position = MagicMock(spec=Portfolio)
+            mock_position.user_id = 2
+
+            with patch("services.portfolio_services.db") as mock_db:
+                mock_db.session = MagicMock()
+                mock_db.session.get.return_value = mock_position
+
+                _, status_code = delete_position(1, 1)
+
+                assert status_code == 404
+                mock_db.session.delete.assert_not_called()
 
     def test_get_portfolio_summary_success(self, app, sample_stock):
         with app.app_context():

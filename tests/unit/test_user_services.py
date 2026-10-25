@@ -284,6 +284,25 @@ class TestUserServices:
                 for key, value in user_data.items():
                     assert getattr(mock_user, key) == value
 
+    def test_edicao_nao_assume_nome_de_usuario_existente(self, app):
+        """Renomear para um nome já usado (ex.: admin) é recusado."""
+        with app.app_context():
+            mock_user = MagicMock(spec=User)
+            mock_user.user_name = "visitante2"
+
+            with (
+                patch("services.user_services.User.query") as mock_query,
+                patch("services.user_services.db.session") as mock_db_session,
+            ):
+                mock_db_session.get.return_value = mock_user
+                mock_query.filter_by.return_value.first.return_value = MagicMock()
+
+                _, status_code = edit_user(1, {"user_name": "admin"}, 1, "USER")
+
+                assert status_code == 400
+                assert mock_user.user_name == "visitante2"
+                mock_db_session.commit.assert_not_called()
+
     def test_edit_user_non_editable_field(self, app):
         """Test that non-admin cannot edit restricted fields"""
         with app.app_context():

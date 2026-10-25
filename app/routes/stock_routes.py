@@ -1,6 +1,7 @@
-import json
 from flask import request
 from flask_jwt_extended import get_jwt_identity
+
+from schemas import load_filters_arg
 
 from services.stock_services import (
     list_stocks,
@@ -25,8 +26,9 @@ def list_stocks_json():
     per_page = request.args.get("per_page", 50, type=int)
     sort_by = request.args.get("sort_by", None)
     sort_dir = request.args.get("sort_dir", "asc")
-    filters_raw = request.args.get("filters", None)
-    filters = json.loads(filters_raw) if filters_raw else None
+    filters, error = load_filters_arg()
+    if error:
+        return error
     search = request.args.get("search", None)
     profile = request.args.get("profile", None)
     return list_stocks(

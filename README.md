@@ -4,7 +4,7 @@ API REST do InvestLink — serviço responsável por autenticação, gestão de 
 
 ## Stack
 
-- Python 3.9
+- Python 3.12
 - Flask 3.0.3
 - SQLAlchemy 2.0.30 + Flask-Migrate (Alembic)
 - PostgreSQL 13

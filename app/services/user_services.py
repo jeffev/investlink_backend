@@ -113,9 +113,21 @@ def edit_user(user_id, user_data, requesting_user_id, requesting_user_profile):
             if requesting_user_profile == "ADMIN"
             else EDITABLE_FIELDS_USER
         )
-        for key, value in user_data.items():
+        for key in user_data:
             if key not in allowed_fields:
                 return jsonify({"message": f"Field '{key}' is not editable"}), 400
+
+        # O login busca pelo nome de usuário e pega o primeiro: sem esta
+        # checagem, renomear a própria conta para "admin" disputava a entrada
+        # com a conta de verdade.
+        new_user_name = user_data.get("user_name")
+        if new_user_name is not None and new_user_name != user.user_name:
+            if not validate_username(new_user_name):
+                return jsonify({"message": "Invalid username format"}), 400
+            if User.query.filter_by(user_name=new_user_name).first():
+                return jsonify({"message": "User already exists"}), 400
+
+        for key, value in user_data.items():
             setattr(user, key, value)
 
         db.session.commit()

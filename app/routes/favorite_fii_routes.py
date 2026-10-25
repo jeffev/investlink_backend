@@ -1,5 +1,8 @@
 from flask import request
 from flask_jwt_extended import get_jwt_identity
+
+from schemas import load_payload
+from schemas.favorite_schema import EditFavoriteFiiSchema, NewFavoriteFiiSchema
 from services.favorite_fii_services import (
     list_favorites_fii,
     view_favorite_fii,
@@ -24,13 +27,19 @@ def view_favorite_fii_json(favorite_id):
 
 
 def new_favorite_fii_json():
-    favorite_data = request.get_json()
+    favorite_data, error = load_payload(NewFavoriteFiiSchema())
+    if error:
+        return error
+    # O dono vem do token, nunca do corpo.
+    favorite_data["user_id"] = get_jwt_identity()
     return new_favorite_fii(favorite_data)
 
 
 def edit_favorite_fii_json(favorite_id):
+    favorite_data, error = load_payload(EditFavoriteFiiSchema())
+    if error:
+        return error
     current_user_id = get_jwt_identity()
-    favorite_data = request.get_json()
     return edit_favorite_fii(favorite_id, favorite_data, current_user_id)
 
 

@@ -5,9 +5,9 @@
 # com NULLS LAST, ON CONFLICT, e a cadeia de migrações do Alembic.
 -r requirements.txt
 
-# 4.13.3 é a última que roda no Python 3.9 — a versão do CI e da imagem de
-# produção. Da 4.14 em diante a biblioteca exige 3.10, e o `pip install` do CI
-# morre antes de chegar a rodar um teste sequer.
+# 4.13.3 foi fixada quando o CI e a imagem rodavam Python 3.9 (hoje 3.12) — a
+# 4.14 em diante exige 3.10. Subir a versão é decisão à parte, não desta troca;
+# fica fixada para o resultado do CI não mudar junto com a imagem.
 testcontainers[postgres]==4.13.3
 black
 flake8

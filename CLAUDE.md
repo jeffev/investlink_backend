@@ -1,6 +1,6 @@
 # Backend InvestLink
 
-Flask 3.0.3 · SQLAlchemy 2.0.30 · PostgreSQL 13 · Python 3.14 (local) / 3.9 (CI/Docker)
+Flask 3.0.3 · SQLAlchemy 2.0.30 · PostgreSQL 13 · Python 3.14 (local) / 3.12 (CI/Docker)
 
 ## Comandos essenciais
 

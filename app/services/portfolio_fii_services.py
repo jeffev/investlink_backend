@@ -122,9 +122,17 @@ def add_fii_position(position_data):
         return jsonify({"message": "An error occurred, please try again later"}), 500
 
 
-def edit_fii_position(position_id, position_data):
+def _owned_fii_position(position_id, user_id):
+    # Mesma regra da carteira de ações: posição alheia é posição inexistente.
+    position = db.session.get(PortfolioFii, position_id)
+    if position is None or position.user_id != user_id:
+        return None
+    return position
+
+
+def edit_fii_position(position_id, position_data, user_id):
     try:
-        position = db.session.get(PortfolioFii, position_id)
+        position = _owned_fii_position(position_id, user_id)
         if position is None:
             return jsonify({"message": "Position not found"}), 404
 
@@ -149,9 +157,9 @@ def edit_fii_position(position_id, position_data):
         return jsonify({"message": "An error occurred, please try again later"}), 500
 
 
-def delete_fii_position(position_id):
+def delete_fii_position(position_id, user_id):
     try:
-        position = db.session.get(PortfolioFii, position_id)
+        position = _owned_fii_position(position_id, user_id)
         if position is None:
             return jsonify({"message": "Position not found"}), 404
 

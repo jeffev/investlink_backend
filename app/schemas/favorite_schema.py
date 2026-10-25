@@ -38,3 +38,35 @@ class EditFavoriteSchema(Schema):
     # é desligar o alerta, e não mandar um valor inválido.
     ceiling_price = fields.Float(allow_none=True)
     target_price = fields.Float(allow_none=True)
+
+
+class NewFavoriteFiiSchema(Schema):
+    """
+    Favoritar um FII — mesma regra da favorita de ação.
+
+    A rota de fundos lia o corpo cru e o serviço fazia
+    `FavoriteFii(**favorite_data)`: o `user_id` do corpo criava favorita na
+    conta de outro, e qualquer outra chave virava coluna.
+    """
+
+    class Meta:
+        unknown = EXCLUDE
+
+    fii_ticker = fields.String(required=True)
+    ceiling_price = fields.Float(load_default=None)
+    target_price = fields.Float(load_default=None)
+
+
+class EditFavoriteFiiSchema(Schema):
+    """
+    Edição parcial, como em `EditFavoriteSchema`.
+
+    Sem `user_id` nem `fii_ticker`: com o `setattr` do serviço, mandar
+    `user_id` transferia a favorita para a conta de outro.
+    """
+
+    class Meta:
+        unknown = EXCLUDE
+
+    ceiling_price = fields.Float(allow_none=True)
+    target_price = fields.Float(allow_none=True)

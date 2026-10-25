@@ -13,6 +13,18 @@ _CACHE_TTL_HOURS = 1
 _NEWSAPI_URL = "https://newsapi.org/v2/everything"
 _TIMEOUT = 10
 _DEFAULT_QUERY = "bolsa OR ibovespa OR investimento OR B3"
+# A chave do cache é a lista de tickers que o cliente manda, então sem teto
+# cada combinação inventada guardava 100 artigos na memória do worker.
+_MAX_CACHE_ENTRIES = 200
+_SAFE_URL_PREFIXES = ("https://", "http://")
+
+
+def _safe_url(url):
+    # O link vira `href` no frontend: um `javascript:` vindo da fonte de
+    # notícias executaria no domínio da aplicação, onde fica o token.
+    if isinstance(url, str) and url.lower().startswith(_SAFE_URL_PREFIXES):
+        return url
+    return None
 
 
 def _is_cache_valid(entry):
@@ -68,6 +80,8 @@ def get_news(tickers, page, per_page):
             resp.raise_for_status()
             data = resp.json()
             articles = data.get("articles", [])
+            if len(_cache) >= _MAX_CACHE_ENTRIES:
+                _cache.clear()
             _cache[cache_key] = {"articles": articles, "fetched_at": datetime.utcnow()}
 
         offset = (page - 1) * per_page
@@ -80,8 +94,8 @@ def get_news(tickers, page, per_page):
                         {
                             "title": a.get("title"),
                             "description": a.get("description"),
-                            "url": a.get("url"),
-                            "urlToImage": a.get("urlToImage"),
+                            "url": _safe_url(a.get("url")),
+                            "urlToImage": _safe_url(a.get("urlToImage")),
                             "publishedAt": a.get("publishedAt"),
                             "source": a.get("source", {}).get("name"),
                         }

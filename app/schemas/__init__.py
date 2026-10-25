@@ -16,6 +16,8 @@ Duas coisas que só aparecem quando a validação some:
     campo que o schema não declara é um campo que o cliente escolhe.
 """
 
+import json
+
 from flask import jsonify, request
 from marshmallow import ValidationError
 
@@ -47,3 +49,26 @@ def load_payload(schema):
         return schema.load(payload), None
     except ValidationError as error:
         return None, (jsonify({"errors": error.messages}), 400)
+
+
+def load_filters_arg():
+    """
+    Lê o `?filters=` das listagens: uma lista JSON de `{id, value}`.
+
+    O `json.loads` direto na rota devolvia 500 para um texto que não é JSON, e
+    um objeto no lugar da lista quebrava lá dentro do serviço, no `f.get`.
+    Devolve `(filtros, None)` ou `(None, resposta_400)`, como `load_payload`.
+    """
+    raw = request.args.get("filters", None)
+    if not raw:
+        return None, None
+    try:
+        filters = json.loads(raw)
+    except ValueError:
+        filters = None
+    if not isinstance(filters, list) or not all(isinstance(f, dict) for f in filters):
+        return None, (
+            jsonify({"errors": {"filters": ["Lista JSON de filtros inválida."]}}),
+            400,
+        )
+    return filters, None

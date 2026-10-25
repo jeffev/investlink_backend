@@ -26,7 +26,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from apscheduler.schedulers.blocking import BlockingScheduler  # noqa: E402
 from apscheduler.triggers.cron import CronTrigger  # noqa: E402
 
+from config import db  # noqa: E402
 from jobs.daily_refresh import run_daily_refresh  # noqa: E402
+from services.demo_account_service import reset_demo_account  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
@@ -36,6 +38,7 @@ logger = logging.getLogger(__name__)
 TIMEZONE = os.environ.get("SCHEDULER_TIMEZONE", "America/Sao_Paulo")
 HOUR = int(os.environ.get("DAILY_REFRESH_HOUR", "21"))
 MINUTE = int(os.environ.get("DAILY_REFRESH_MINUTE", "0"))
+DEMO_RESET_HOUR = int(os.environ.get("DEMO_RESET_HOUR", "4"))
 
 
 def _build_app():
@@ -61,6 +64,22 @@ def executar_uma_vez(app):
         return execucao.status
 
 
+def restaurar_conta_demo(app):
+    """
+    Todo dia, inclusive fim de semana: a demo recebe visita todo dia, e o que
+    um visitante apagou ou gravou na conta compartilhada fica para o próximo.
+    """
+    user_name = os.environ.get("DEMO_USER_NAME")
+    if not user_name:
+        return
+    with app.app_context():
+        try:
+            reset_demo_account(user_name)
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Falha ao restaurar a conta demo: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Rotinas automáticas do InvestLink")
     parser.add_argument(
@@ -84,6 +103,14 @@ def main():
         id="atualizacao_diaria",
         # Se o contêiner ficou fora do ar na hora marcada, roda ao voltar em
         # vez de pular o dia — mas uma vez só, não uma por disparo perdido.
+        misfire_grace_time=6 * 60 * 60,
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        lambda: restaurar_conta_demo(app),
+        trigger=CronTrigger(hour=DEMO_RESET_HOUR, minute=0),
+        id="restaurar_conta_demo",
         misfire_grace_time=6 * 60 * 60,
         coalesce=True,
         max_instances=1,

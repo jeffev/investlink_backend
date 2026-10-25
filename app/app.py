@@ -10,6 +10,7 @@ from flask_migrate import upgrade
 from utils import setup_routes
 from config import create_app, db
 from models.user import User
+from services.demo_account_service import reset_demo_account
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,9 @@ def prepare_database():
         upgrade()
         seed_admin()
         seed_demo_user()
+        demo_user_name = os.environ.get("DEMO_USER_NAME")
+        if demo_user_name:
+            reset_demo_account(demo_user_name)
 
 
 if __name__ == "__main__":
